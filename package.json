@@ -5,6 +5,9 @@
   "description": "Sidebar de conversas para o Claude Code no terminal",
   "type": "module",
   "license": "MIT",
+  "bin": {
+    "hive": "bin/hive"
+  },
   "engines": {
     "node": ">=20"
   },

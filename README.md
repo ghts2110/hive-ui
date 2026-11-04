@@ -43,26 +43,22 @@ ffmpeg -version   # opcional, para o ditado
 
 No macOS, o que faltar sai pelo Homebrew: `brew install tmux node ffmpeg`.
 
-### 2. Clone e dependências
+### 2. Clone e instale
 
 ```sh
 git clone https://github.com/ghts2110/hive-ui.git ~/hive-ui
-cd ~/hive-ui && npm install
+cd ~/hive-ui && npm install && npm link
 ```
 
 O `npm install` também traz o [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), que roda a voz da leitura em voz alta e o reconhecimento do ditado no próprio computador. Os modelos em si só são baixados quando você liga cada função (ver [Modelos de voz e ditado](#modelos-de-voz-e-ditado)).
 
 ### 3. Comando `hive`
 
-Adicione ao `~/.zshrc` (ou `~/.bashrc`), ajustando o caminho se clonou em outro lugar:
+O `npm link` já criou o comando: abra um terminal novo e digite `hive`. Não precisa mexer no `~/.zshrc` (ou `~/.bashrc`). O `claude` não é tocado: continua abrindo o Claude Code puro.
 
-```sh
-alias hive="$HOME/hive-ui/bin/hive"
-```
+O comando aponta para a pasta clonada, então um `git pull` já atualiza a interface; só rode `npm install` de novo se as dependências mudarem. Com o nvm, o comando fica preso à versão do Node em que o `npm link` rodou: trocando de versão (`nvm use`), rode `npm link` de novo na pasta.
 
-Abra um terminal novo (ou rode `source ~/.zshrc`) e digite `hive`. O `claude` não é tocado: continua abrindo o Claude Code puro.
-
-**Vindo de uma versão antiga?** Antes a interface abria por uma função no `~/.zshrc` (ou `~/.bashrc`), como `claude() { ~/claude-ui/bin/claude-ui "$@"; }`. Depois de atualizar, ela aponta para um arquivo que não existe mais e o `claude` dá `no such file or directory`. Apague a função inteira, adicione o `alias` acima e abra um terminal novo: o `source ~/.zshrc` não remove uma função já carregada (no terminal atual, `unfunction claude` no zsh ou `unset -f claude` no bash). Se a função já apontava para `.../bin/hive`, ela segue abrindo a interface sem entrar em recursão até ser apagada.
+**Vindo de uma versão antiga?** Antes a interface abria por uma função `claude() { ... }` ou por um `alias hive=...` no `~/.zshrc` (ou `~/.bashrc`). Apague-os, rode o `npm link` acima e abra um terminal novo: o `source ~/.zshrc` não remove uma função já carregada (no terminal atual, `unfunction claude` no zsh ou `unset -f claude` no bash).
 
 ### 4. Permissões e ajustes do macOS
 
@@ -207,9 +203,9 @@ A interface sempre deixa uma saída para o Claude Code sem nada em volta:
 | `hive: Node não encontrado. Instale o Node 20+` | Node ausente ou fora do PATH. Confira `command -v node` num terminal novo; com nvm carregado sob demanda (lazy load), carregue-o no início do shell ou rode `nvm alias default 20`. |
 | `hive: dependências faltando. Rode 'npm install' em ...` | Faltou o passo 2: rode `npm install` na pasta clonada. |
 | `hive: Claude Code não encontrado no PATH.` | O binário `claude` não está no PATH. Instale o Claude Code e confira com `command -v claude`. |
-| `zsh: command not found: hive` | O `alias hive` não está no `~/.zshrc` (ou `~/.bashrc`) ou o terminal foi aberto antes dele. Confira o passo 3 e abra um terminal novo. |
+| `zsh: command not found: hive` | Faltou o `npm link` na pasta clonada, ou ele rodou em outra versão do Node (nvm). Rode `npm link` na pasta e abra um terminal novo. |
 | `no such file or directory: .../bin/claude-ui` ao digitar `claude` | Sobrou a função `claude()` da versão antiga. Veja "Vindo de uma versão antiga?" no passo 3. |
-| `no such file or directory: .../bin/hive` (zsh) ou `.../bin/hive: No such file or directory` (bash) | O caminho no `alias hive` do `~/.zshrc` (ou `~/.bashrc`) não aponta para onde o repositório foi clonado. |
+| `no such file or directory: .../bin/hive` (zsh) ou `.../bin/hive: No such file or directory` (bash) | Sobrou um `alias hive=...` antigo no `~/.zshrc` (ou `~/.bashrc`) apontando para outro lugar. Apague-o e abra um terminal novo. |
 
 ### No sidebar
 
@@ -230,7 +226,7 @@ Enquanto não resolve, `claude` abre o Claude Code puro.
 
 ## Desinstalar
 
-1. Apague a linha `alias hive=...` do `~/.zshrc` (ou `~/.bashrc`), e a função antiga `claude() { ... }` inteira se ainda estiver lá, e abra um terminal novo.
+1. Remova o comando: `npm rm -g hive-ui`. Se ainda houver um `alias hive=...` ou a função antiga `claude() { ... }` no `~/.zshrc` (ou `~/.bashrc`), apague-os e abra um terminal novo.
 2. Apague a pasta clonada: `rm -rf ~/hive-ui`.
 3. Apague os modelos da leitura em voz alta e do ditado, se foram baixados: `rm -rf ~/.cache/hive-ui`.
 4. Opcional: tire o acesso do Terminal ao microfone em Ajustes do Sistema > Privacidade e Segurança > Microfone, se só o liberou para o ditado.
@@ -243,7 +239,7 @@ Não sobra mais nada: fora esses modelos, o projeto não salva arquivos fora do 
 - **Node + [Ink](https://github.com/vadimdemedes/ink)** desenha o sidebar, que conversa com o tmux pela linha de comando.
 - **Hooks e statusline do Claude Code** avisam o sidebar quando uma conversa muda de status, ganha título ou edita arquivos, e trazem o uso do plano.
 - **[sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)** roda a voz da leitura e o reconhecimento do ditado localmente.
-- O `hive` é um alias para o launcher do projeto (`bin/hive`), que abre o tmux e chama o binário `claude` do PATH; o `claude` em si não é interceptado.
+- O `hive` é um link, criado pelo `npm link`, para o launcher do projeto (`bin/hive`), que abre o tmux e chama o binário `claude` do PATH; o `claude` em si não é interceptado.
 
 Testes do launcher: `npm test`.
 

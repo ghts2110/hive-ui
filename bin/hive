@@ -2,7 +2,17 @@
 # Launcher do hive-ui: abre o tmux com o sidebar à esquerda e o Claude Code
 # ocupando o resto. Argumentos são repassados ao Claude Code.
 
-ROOT=$(cd "$(dirname "$0")/.." && pwd -P)
+# Instalado pelo `npm link`, o `hive` do PATH é um link para este arquivo:
+# segue os links até o repositório.
+SELF=$0
+while [ -L "$SELF" ]; do
+	alvo=$(readlink "$SELF")
+	case $alvo in
+		/*) SELF=$alvo ;;
+		*) SELF=$(dirname "$SELF")/$alvo ;;
+	esac
+done
+ROOT=$(cd "$(dirname "$SELF")/.." && pwd -P)
 
 # Binário original, nunca a função antiga `claude()` do ~/.zshrc, que chama
 # este launcher: só um caminho serve, senão seria uma função exportada (bash
