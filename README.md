@@ -57,12 +57,12 @@ O `npm install` também traz o [sherpa-onnx](https://github.com/k2-fsa/sherpa-on
 Adicione ao `~/.zshrc` (ou `~/.bashrc`), ajustando o caminho se clonou em outro lugar:
 
 ```sh
-alias hive=~/hive-ui/bin/hive
+alias hive="$HOME/hive-ui/bin/hive"
 ```
 
 Abra um terminal novo (ou rode `source ~/.zshrc`) e digite `hive`. O `claude` não é tocado: continua abrindo o Claude Code puro.
 
-**Vindo de uma versão antiga?** Antes a interface abria por uma função `claude() { ... }` no `~/.zshrc` (ou `~/.bashrc`). Apague essa linha e use o `alias` acima no lugar, para o `claude` voltar a ser o Claude Code puro. Enquanto ela ficar, o `claude` segue abrindo a interface sem entrar em recursão, se apontar para `.../bin/hive`; se apontar para o antigo `.../bin/claude-ui`, que não existe mais, dá `no such file or directory`.
+**Vindo de uma versão antiga?** Antes a interface abria por uma função no `~/.zshrc` (ou `~/.bashrc`), como `claude() { ~/claude-ui/bin/claude-ui "$@"; }`. Depois de atualizar, ela aponta para um arquivo que não existe mais e o `claude` dá `no such file or directory`. Apague a função inteira, adicione o `alias` acima e abra um terminal novo: o `source ~/.zshrc` não remove uma função já carregada (no terminal atual, `unfunction claude` no zsh ou `unset -f claude` no bash). Se a função já apontava para `.../bin/hive`, ela segue abrindo a interface sem entrar em recursão até ser apagada.
 
 ### 4. Permissões e ajustes do macOS
 
@@ -207,6 +207,8 @@ A interface sempre deixa uma saída para o Claude Code sem nada em volta:
 | `hive: Node não encontrado. Instale o Node 20+` | Node ausente ou fora do PATH. Confira `command -v node` num terminal novo; com nvm carregado sob demanda (lazy load), carregue-o no início do shell ou rode `nvm alias default 20`. |
 | `hive: dependências faltando. Rode 'npm install' em ...` | Faltou o passo 2: rode `npm install` na pasta clonada. |
 | `hive: Claude Code não encontrado no PATH.` | O binário `claude` não está no PATH. Instale o Claude Code e confira com `command -v claude`. |
+| `zsh: command not found: hive` | O `alias hive` não está no `~/.zshrc` (ou `~/.bashrc`) ou o terminal foi aberto antes dele. Confira o passo 3 e abra um terminal novo. |
+| `no such file or directory: .../bin/claude-ui` ao digitar `claude` | Sobrou a função `claude()` da versão antiga. Veja "Vindo de uma versão antiga?" no passo 3. |
 | `no such file or directory: .../bin/hive` (zsh) ou `.../bin/hive: No such file or directory` (bash) | O caminho no `alias hive` do `~/.zshrc` (ou `~/.bashrc`) não aponta para onde o repositório foi clonado. |
 
 ### No sidebar
@@ -228,7 +230,7 @@ Enquanto não resolve, `claude` abre o Claude Code puro.
 
 ## Desinstalar
 
-1. Apague a linha `alias hive=...` do `~/.zshrc` (ou `~/.bashrc`), e a função antiga `claude() { ... }` se ainda estiver lá, e abra um terminal novo.
+1. Apague a linha `alias hive=...` do `~/.zshrc` (ou `~/.bashrc`), e a função antiga `claude() { ... }` inteira se ainda estiver lá, e abra um terminal novo.
 2. Apague a pasta clonada: `rm -rf ~/hive-ui`.
 3. Apague os modelos da leitura em voz alta e do ditado, se foram baixados: `rm -rf ~/.cache/hive-ui`.
 4. Opcional: tire o acesso do Terminal ao microfone em Ajustes do Sistema > Privacidade e Segurança > Microfone, se só o liberou para o ditado.
