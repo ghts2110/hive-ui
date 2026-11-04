@@ -1,18 +1,58 @@
-// Anel de progresso em braille: cada caractere é uma grade de 2x4 pontos, e
-// no terminal os pontos ficam quase quadrados, então 6 colunas x 3 linhas
-// formam um círculo de 12x12 pontos com um buraco no meio. O anel enche a
-// partir do topo, em sentido horário; cada caractere tem uma cor só, e conta
-// como cheio se o ângulo médio dos seus pontos já foi alcançado.
-export const colunas = 6;
-export const linhas = 3;
+// Indicador de uso em braille, com o símbolo de cada IA: cada caractere é
+// uma grade de 2x4 pontos, e no terminal os pontos ficam quase quadrados,
+// então 8 colunas x 4 linhas formam um desenho de 16x16 pontos. O símbolo
+// enche a partir do topo, em sentido horário; cada caractere tem uma cor só,
+// e conta como cheio se o ângulo médio dos seus pontos já foi alcançado.
+export const colunas = 8;
+export const linhas = 4;
 
 const pontos = [[0x01, 0x08], [0x02, 0x10], [0x04, 0x20], [0x40, 0x80]];
 
-// Linhas do anel, cada uma como trechos {texto, cheio} para colorir.
-export function anel(fracao) {
-	const largura = colunas * 2, altura = linhas * 4;
-	const cx = (largura - 1) / 2, cy = (altura - 1) / 2;
-	const fora = Math.min(largura, altura) / 2, dentro = fora - 2.5;
+// O asterisco de raios irregulares do Claude e o nó de seis elos do Codex
+// (OpenAI): a borda em lobos, o hexágono no meio e os raios em espiral.
+const simbolos = {
+	claude: [
+		'       ##       ',
+		'    #  ##  #    ',
+		'    ## ## ##    ',
+		'     # ## #     ',
+		'  #  ######  #  ',
+		'   ## #### ###  ',
+		'    ########    ',
+		'     ######     ',
+		'################',
+		'    #######     ',
+		'   ## #### ##   ',
+		' ##  ### ##  #  ',
+		'     # #  #     ',
+		'    #  #  ##    ',
+		'       #   #    ',
+		'       #        ',
+	],
+	codex: [
+		'                ',
+		'    #### ###    ',
+		'   ##  ##  ##   ',
+		'   #   #    #   ',
+		'   #  ##   ###  ',
+		'  ##  ########  ',
+		' # ########   # ',
+		' #  ###  ##   # ',
+		' #   ##  ###  # ',
+		' #   ######## # ',
+		'  ########  ##  ',
+		'  ###    #  #   ',
+		'   #    #   #   ',
+		'   ##  ##  ##   ',
+		'    ### ####    ',
+		'                ',
+	],
+};
+
+// Linhas do símbolo da IA, cada uma como trechos {texto, cheio} para colorir.
+export function anel(fracao, ia) {
+	const desenho = simbolos[ia];
+	const cx = (colunas * 2 - 1) / 2, cy = (linhas * 4 - 1) / 2;
 	const saida = [];
 	for (let l = 0; l < linhas; l++) {
 		const trechos = [];
@@ -20,12 +60,11 @@ export function anel(fracao) {
 			let codigo = 0, angulos = 0, n = 0;
 			for (let dy = 0; dy < 4; dy++) {
 				for (let dx = 0; dx < 2; dx++) {
-					const x = c * 2 + dx - cx, y = l * 4 + dy - cy;
-					const raio = Math.hypot(x, y);
-					if (raio > fora || raio < dentro) continue;
+					const px = c * 2 + dx, py = l * 4 + dy;
+					if (desenho[py][px] !== '#') continue;
 					codigo |= pontos[dy][dx];
 					// 0 no topo, 0.5 embaixo, crescendo no sentido horário.
-					angulos += (Math.atan2(x, -y) / (2 * Math.PI) + 1) % 1;
+					angulos += (Math.atan2(px - cx, cy - py) / (2 * Math.PI) + 1) % 1;
 					n++;
 				}
 			}

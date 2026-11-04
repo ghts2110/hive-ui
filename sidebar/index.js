@@ -74,8 +74,8 @@ function Conversa({conversa, sobCursor, quadro, largura}) {
 	);
 }
 
-// Uso do plano de cada IA instalada (ver sidebar/anel.js), um anel para
-// cada, um em cima do outro: o do Claude em laranja, o do Codex em azul
+// Uso do plano de cada IA instalada (ver sidebar/anel.js), o símbolo de cada
+// uma, um em cima do outro: o do Claude em laranja, o do Codex em azul
 // embaixo, a parte usada na cor e o resto apagado; sem o dado (ainda sem
 // resposta, sem login ou logado por API), todo apagado. A % e o reinício da
 // janela de 5h, e a % e o dia da semanal, só aparecem ao lado de um deles
@@ -105,7 +105,7 @@ function Anel({ia, uso, detalhe, largura}) {
 		h(
 			Box,
 			{flexDirection: 'column', flexShrink: 0, marginRight: 1},
-			anel.anel((uso?.usado ?? 0) / 100).map((trechos, l) =>
+			anel.anel((uso?.usado ?? 0) / 100, ia).map((trechos, l) =>
 				h(Text, {key: l}, trechos.map(({texto, cheio}, j) => h(Text, {key: j, color: cheio ? cor : apagado, dimColor: !cheio}, texto))),
 			),
 		),

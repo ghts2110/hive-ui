@@ -372,13 +372,13 @@ tecla 2
 [ "$(na_tela)" = "$(conversas | cut -d' ' -f2)" ] && ok "2 abre a segunda conversa" || falha "2: $(na_tela)"
 
 # Anel do uso do plano: a statusline guarda a % da janela de 5h em @uso e
-# repassa a statusline do usuário; com o Codex instalado, o anel do Claude
-# fica em cima do dele, acima do rodapé (linhas 21-23 e 24-26 num pane de
-# 30), e cada um mostra a % com o mouse em cima ou depois de um clique.
-anel() { T capture-pane -p -t "$sb" | sed -n 21,23p; }
+# repassa a statusline do usuário; com o Codex instalado, o símbolo do
+# Claude fica em cima do dele, acima do rodapé (linhas 19-22 e 23-26 num pane
+# de 30), e cada um mostra a % com o mouse em cima ou depois de um clique.
+anel() { T capture-pane -p -t "$sb" | sed -n 19,22p; }
 anel | grep -q "sem dado" && falha "anel mostra a % sem o mouse" \
 	|| ok "anel não mostra a % sem o mouse"
-passar() { T send-keys -t "$sb" -l "$(printf '\033[<35;4;22M')"; sleep 1; }
+passar() { T send-keys -t "$sb" -l "$(printf '\033[<35;4;20M')"; sleep 1; }
 passar
 anel | grep -q "sem dado" && ok "sem dado de uso, o anel diz sem dado" || falha "sem uso: $(anel)"
 statusline() {
@@ -418,16 +418,16 @@ hook "$pane" pronto '{"prompt":"Depois"}'; sleep 1
 diff_de Depois | grep -q "hive-ui" && ! diff_de Depois | grep -q "+" && ok "/clear zera o contador" || falha "clear: $(diff_de Depois)"
 linhas "$pane" 9 4
 diff_de Depois | grep -q "+4 -2" && ok "depois do /clear conta só o que veio depois" || falha "após clear: $(diff_de Depois)"
-T send-keys -t "$sb" -l "$(printf '\033[<35;12;22M')"; sleep 1
+T send-keys -t "$sb" -l "$(printf '\033[<35;12;20M')"; sleep 1
 anel | grep -q "%" && falha "% continua fora do anel" || ok "% some quando o mouse sai do anel"
-T send-keys -t "$sb" -l "$(printf '\033[<0;4;22M')"; sleep 1
+T send-keys -t "$sb" -l "$(printf '\033[<0;4;20M')"; sleep 1
 anel | grep -q "42% 5h" && ok "clique no anel fixa a %" || falha "clique no anel: $(anel)"
 T set -q @uso "42 $(($(date +%s) - 1))"; sleep 1.5
 anel | grep -q "sem dado" && ok "janela de 5h reiniciada vira sem dado" || falha "reiniciada: $(anel)"
-T send-keys -t "$sb" -l "$(printf '\033[<0;4;22M')"; sleep 1
+T send-keys -t "$sb" -l "$(printf '\033[<0;4;20M')"; sleep 1
 # O do Codex, embaixo, com o uso que o app-server dele responde.
-anel_codex() { T capture-pane -p -t "$sb" | sed -n 24,26p; }
-T send-keys -t "$sb" -l "$(printf '\033[<35;4;25M')"; sleep 1
+anel_codex() { T capture-pane -p -t "$sb" | sed -n 23,26p; }
+T send-keys -t "$sb" -l "$(printf '\033[<35;4;24M')"; sleep 1
 anel_codex | grep -q "17% 5h" && ! anel | grep -q "%" && ok "anel do codex embaixo mostra o uso dele" \
 	|| falha "anel do codex: $(anel) / $(anel_codex)"
 
@@ -625,8 +625,8 @@ tecla c
 T capture-pane -p -t "$sb" | grep -q "Codex não encontrado" && [ "$(conversas)" = "1 " ] \
 	&& ok "sem codex, c diz como instalar" || falha "sem codex: $(T capture-pane -p -t "$sb")"
 tecla Escape
-T capture-pane -p -t "$sb" | sed -n 21,23p | grep -q "⣿" && falha "sem codex, anel dele aparece" \
-	|| { T capture-pane -p -t "$sb" | sed -n 24,26p | grep -q "⣿" && ok "sem codex, só o anel do claude" || falha "sem anel: $(T capture-pane -p -t "$sb")"; }
+T capture-pane -p -t "$sb" | sed -n 19,22p | grep -q "[^ ]" && falha "sem codex, símbolo dele aparece" \
+	|| { T capture-pane -p -t "$sb" | sed -n 23,26p | grep -q "[^ ]" && ok "sem codex, só o símbolo do claude" || falha "sem símbolo: $(T capture-pane -p -t "$sb")"; }
 T kill-server 2>/dev/null; wait "$PID" 2>/dev/null
 
 # Instalado pelo `npm link`, o `hive` do PATH é um link relativo, como o do

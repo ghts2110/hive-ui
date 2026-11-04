@@ -1,7 +1,7 @@
 // Statusline do Claude Code (ver sidebar/hooks.json): o JSON que ela recebe
 // traz o uso do plano (rate_limits, só para assinantes Pro/Max, depois da
 // primeira resposta). A % da janela de 5h e quando ela reinicia vão para @uso,
-// junto com as da semanal, que o sidebar desenha como um anel (ver
+// junto com as da semanal, que o sidebar desenha no símbolo do Claude (ver
 // sidebar/anel.js). Traz também as
 // linhas que esta conversa adicionou e removeu (cost), que vão para @linhas no
 // pane dela: o sidebar mostra cada conversa com as suas.
