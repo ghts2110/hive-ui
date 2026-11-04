@@ -4,14 +4,14 @@
 ROOT=$(cd "$(dirname "$0")/.." && pwd -P)
 TMP=$(mktemp -d)
 FAKE="$TMP/bin"
-export CLAUDE_UI_SOCKET="claude-ui-test-$$"
+export HIVE_SOCKET="hive-test-$$"
 mkdir -p "$FAKE"
 
 # Voz natural: cache isolado e um servidor local no lugar do GitHub, sem a
 # voz até o teste dela pôr uma falsa em $TMP/www.
 export XDG_CACHE_HOME="$TMP/cache"
 PORTA=$((20000 + $$ % 10000))
-export CLAUDE_UI_VOZ_URL="http://127.0.0.1:$PORTA/voz.tar.bz2"
+export HIVE_VOZ_URL="http://127.0.0.1:$PORTA/voz.tar.bz2"
 mkdir -p "$TMP/www"
 (cd "$TMP/www" && exec python3 -m http.server "$PORTA" --bind 127.0.0.1) >/dev/null 2>&1 &
 HTTP=$!
@@ -19,12 +19,12 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do curl -s -o /dev/null "http://127.0.0.1:$PORTA/
 # Ditado: o modelo vem do mesmo servidor (só depois que o teste dele o põe
 # lá) e um ouvinte falso faz o papel do ouvir.js, que precisaria do modelo de
 # verdade. Ele faz o que $TMP/ouvir mandar e guarda o pid em $TMP/ouvinte.
-export CLAUDE_UI_DITADO_URL="http://127.0.0.1:$PORTA/ditado.tar.bz2"
-export CLAUDE_UI_VAD_URL="http://127.0.0.1:$PORTA/vad.onnx"
-export CLAUDE_UI_OUVIR="$FAKE/ouvir"
+export HIVE_DITADO_URL="http://127.0.0.1:$PORTA/ditado.tar.bz2"
+export HIVE_VAD_URL="http://127.0.0.1:$PORTA/vad.onnx"
+export HIVE_OUVIR="$FAKE/ouvir"
 # Sem o binário do sherpa-onnx para esta plataforma, não há voz natural.
 [ -e "$ROOT/node_modules/sherpa-onnx-$(node -p 'process.platform + "-" + process.arch')/sherpa-onnx.node" ] && NATURAL=1
-trap 'tmux -L "$CLAUDE_UI_SOCKET" kill-server 2>/dev/null; kill $HTTP 2>/dev/null' EXIT
+trap 'tmux -L "$HIVE_SOCKET" kill-server 2>/dev/null; kill $HTTP 2>/dev/null' EXIT
 
 # claude falso: responde versão e plano (para o cabeçalho), grava argumentos e
 # ambiente, depois espera.
@@ -36,7 +36,7 @@ case "\$1" in
 esac
 [ -n "\$FAKE_LOGO" ] && printf ' ▐▛█  Claude Code v9.9.9\n▝▜██  Modelo · Claude Max\n ▝▝   ~/projeto\n'
 printf '%s\n' "\$@" > "$TMP/args"
-echo "CLAUDE_UI=\$CLAUDE_UI" > "$TMP/env"
+echo "HIVE=\$HIVE" > "$TMP/env"
 trap 'kill \$!; exit 0' TERM
 sleep "\${FAKE_SLEEP:-0}" & wait \$!
 FAKE
@@ -85,41 +85,41 @@ chmod +x "$FAKE/ouvir"
 falhas=0
 ok() { echo "ok   - $1"; }
 falha() { echo "FAIL - $1"; falhas=$((falhas + 1)); }
-T() { tmux -L "$CLAUDE_UI_SOCKET" "$@"; }
+T() { tmux -L "$HIVE_SOCKET" "$@"; }
 servidor_vivo() { T ls >/dev/null 2>&1; }
 
 # Abre o launcher num pty de 120x30, em segundo plano.
 abrir() {
 	FAKE_SLEEP=$1; shift
-	FAKE_SLEEP=$FAKE_SLEEP FAKE_LOGO=1 PATH="$FAKE:$PATH" TMUX= CLAUDE_UI= \
+	FAKE_SLEEP=$FAKE_SLEEP FAKE_LOGO=1 PATH="$FAKE:$PATH" TMUX= HIVE= \
 		script -q /dev/null sh -c 'stty cols 120 rows 30; exec "$0" "$@"' \
-		"$ROOT/bin/claude-ui" "$@" </dev/null >/dev/null 2>&1 &
+		"$ROOT/bin/hive" "$@" </dev/null >/dev/null 2>&1 &
 	PID=$!
 	sleep 2
 }
 
 # Dentro da interface: roda o claude puro.
 : > "$TMP/args"
-PATH="$FAKE:$PATH" CLAUDE_UI=1 "$ROOT/bin/claude-ui" -v
+PATH="$FAKE:$PATH" HIVE=1 "$ROOT/bin/hive" -v
 [ "$(cat "$TMP/args")" = "-v" ] && ! servidor_vivo \
 	&& ok "dentro da interface roda o claude puro" \
 	|| falha "dentro da interface roda o claude puro"
 
 # Fora de um terminal ou em modo não interativo: claude puro.
 : > "$TMP/args"
-echo | PATH="$FAKE:$PATH" TMUX= CLAUDE_UI= "$ROOT/bin/claude-ui" -p oi | cat
+echo | PATH="$FAKE:$PATH" TMUX= HIVE= "$ROOT/bin/hive" -p oi | cat
 [ "$(cat "$TMP/args" | tr '\n' ' ')" = "-p oi " ] && ! servidor_vivo \
 	&& ok "em pipe roda o claude puro" || falha "em pipe roda o claude puro"
 : > "$TMP/args"
-PATH="$FAKE:$PATH" TMUX= CLAUDE_UI= script -q /dev/null "$ROOT/bin/claude-ui" mcp list </dev/null >/dev/null 2>&1
+PATH="$FAKE:$PATH" TMUX= HIVE= script -q /dev/null "$ROOT/bin/hive" mcp list </dev/null >/dev/null 2>&1
 [ "$(cat "$TMP/args" | tr '\n' ' ')" = "mcp list " ] && ! servidor_vivo \
 	&& ok "subcomando roda o claude puro" || falha "subcomando roda o claude puro"
 
 # Sem tmux: mensagem clara.
 SEM_TMUX="$TMP/sem-tmux"; mkdir -p "$SEM_TMUX"
 ln -s "$FAKE/claude" "$SEM_TMUX/claude"
-PATH="$SEM_TMUX:/usr/bin:/bin" TMUX= CLAUDE_UI= \
-	script -q "$TMP/saida" "$ROOT/bin/claude-ui" </dev/null >/dev/null 2>&1
+PATH="$SEM_TMUX:/usr/bin:/bin" TMUX= HIVE= \
+	script -q "$TMP/saida" "$ROOT/bin/hive" </dev/null >/dev/null 2>&1
 saida=$(cat "$TMP/saida")
 echo "$saida" | grep -q "tmux não encontrado" \
 	&& ok "sem tmux mostra mensagem" || falha "sem tmux mostra mensagem: $saida"
@@ -132,8 +132,8 @@ panes=$(T list-panes -t "$(T show -v @sidebar)" -F '#{pane_left}:#{pane_width}' 
 esperado=$(printf '%s\n' --settings "$ROOT/sidebar/hooks.json" --model opus "olá mundo" ";" "x;" '$HOME' '\;' 'dir#S')
 [ "$(cat "$TMP/args")" = "$esperado" ] && ok "argumentos chegam ao claude" \
 	|| falha "argumentos: $(cat "$TMP/args" | tr '\n' '|')"
-grep -q "CLAUDE_UI=1" "$TMP/env" && ok "claude roda marcado como dentro da interface" \
-	|| falha "CLAUDE_UI não chegou ao claude"
+grep -q "HIVE=1" "$TMP/env" && ok "claude roda marcado como dentro da interface" \
+	|| falha "HIVE não chegou ao claude"
 [ "$(cat "$TMP/caffeinate" | tr '\n' ' ')" = "-di -w $(T list-clients -F '#{client_pid}') " ] && cafeina_viva \
 	&& ok "caffeinate segura repouso e tela enquanto o cliente do tmux vive" \
 	|| falha "caffeinate: $(cat "$TMP/caffeinate" 2>/dev/null | tr '\n' ' ')"
@@ -171,11 +171,11 @@ largura=$(T list-panes -a -F '#{pane_left}:#{pane_width}' | head -1)
 # Conversas pelo sidebar.
 sb=$(T show -v @sidebar)
 tecla() { T select-pane -t "$sb"; sleep 0.3; T send-keys -t "$sb" "$1"; sleep 1.5; }
-conversas() { T list-panes -s -t claude-ui -F '#{@conversa}' | grep . | sort -n | tr '\n' ' '; }
+conversas() { T list-panes -s -t hive -F '#{@conversa}' | grep . | sort -n | tr '\n' ' '; }
 na_tela() { T list-panes -t "$sb" -F '#{@conversa}' | grep .; }
 # Encerra o claude da conversa, como um /exit.
 sair() {
-	pane=$(T list-panes -s -t claude-ui -F '#{@conversa} #{pane_id}' | awk -v n="$1" '$1 == n { print $2 }')
+	pane=$(T list-panes -s -t hive -F '#{@conversa} #{pane_id}' | awk -v n="$1" '$1 == n { print $2 }')
 	pkill -P "$(T display -p -t "$pane" '#{pane_pid}')"
 	sleep 1
 }
@@ -303,7 +303,7 @@ T select-pane -t "$pane" -T "⠐ Corrige login"; sleep 1.5
 item "○ nova conversa" >/dev/null && ok "assunto antigo continua ignorado com o spinner" || falha "spinner após /clear: $(item ○)"
 
 # Novidade fora da tela, p (pendente), Tab (anterior) e 1-9.
-outro=$(T list-panes -s -t claude-ui -F '#{pane_id} #{window_id} #{@conversa}' |
+outro=$(T list-panes -s -t hive -F '#{pane_id} #{window_id} #{@conversa}' |
 	awk -v w="$(janela "$sb")" '$3 && $2 != w { print $1; exit }')
 n_outro=$(T show -pv -t "$outro" @conversa)
 # O bell que o tmux repassa ao terminal dispara o alert-bell.
@@ -374,7 +374,7 @@ linhas "$outro" 0 0
 ! diff_de Outra | grep -q "+" && ok "contador some quando o cost volta a zero" || falha "zero: $(diff_de Outra)"
 hook "$pane" limpar '{}'
 hook "$pane" pronto '{"prompt":"Depois"}'; sleep 1
-diff_de Depois | grep -q "claude-ui" && ! diff_de Depois | grep -q "+" && ok "/clear zera o contador" || falha "clear: $(diff_de Depois)"
+diff_de Depois | grep -q "hive-ui" && ! diff_de Depois | grep -q "+" && ok "/clear zera o contador" || falha "clear: $(diff_de Depois)"
 linhas "$pane" 9 4
 diff_de Depois | grep -q "+4 -2" && ok "depois do /clear conta só o que veio depois" || falha "após clear: $(diff_de Depois)"
 T send-keys -t "$sb" -l "$(printf '\033[<35;12;25M')"; sleep 1
@@ -398,7 +398,7 @@ printf 'Luciana             pt_BR    # Olá\nLuciana (Enhanced)  pt_BR    # Olá
 clicar_voz
 canto | grep -q "◁)" && ! T capture-pane -p -t "$sb" | grep -q "Gerenciar" \
 	&& ok "clique no alto-falante liga a leitura" || falha "ligar: $(canto)"
-[ -z "$NATURAL" ] || { T capture-pane -p -t "$sb" | grep -q "usando a do sistema" && [ ! -e "$TMP/cache/claude-ui/vits-piper-pt_BR-faber-medium" ] \
+[ -z "$NATURAL" ] || { T capture-pane -p -t "$sb" | grep -q "usando a do sistema" && [ ! -e "$TMP/cache/hive-ui/vits-piper-pt_BR-faber-medium" ] \
 	&& ok "sem baixar a voz natural, avisa e usa a do sistema" || falha "aviso da voz natural: $(T capture-pane -p -t "$sb")"; }
 # O transcript chega pelos hooks; só o que ele escrever depois de ligar é lido.
 pane=$(T list-panes -t "$sb" -F '#{pane_id} #{@conversa}' | awk '$2 { print $1 }')
@@ -429,7 +429,7 @@ rm -f "$TMP/falado"
 resposta "$transcript" true "subagente"
 [ ! -e "$TMP/falado" ] && ok "subagente não é lido" || falha "subagente: $(cat "$TMP/falado")"
 # A conversa fora da tela fica em silêncio.
-outro=$(T list-panes -s -t claude-ui -F '#{pane_id} #{window_id} #{@conversa}' |
+outro=$(T list-panes -s -t hive -F '#{pane_id} #{window_id} #{@conversa}' |
 	awk -v w="$(janela "$sb")" '$3 && $2 != w { print $1; exit }')
 hook "$outro" trabalhando "{\"transcript_path\":\"$TMP/outra.jsonl\",\"hook_event_name\":\"UserPromptSubmit\"}"
 resposta "$TMP/outra.jsonl" false "fora da tela"
@@ -446,8 +446,8 @@ if [ -n "$NATURAL" ]; then
 	: > "$TMP/pacote/vits-piper-pt_BR-faber-medium/tokens.txt"
 	tar cjf "$TMP/www/voz.tar.bz2" -C "$TMP/pacote" vits-piper-pt_BR-faber-medium
 	tecla v; sleep 1
-	[ -e "$TMP/cache/claude-ui/vits-piper-pt_BR-faber-medium/pt_BR-faber-medium.onnx" ] && ! ls "$TMP/cache/claude-ui" | grep -q baixando \
-		&& ! T capture-pane -p -t "$sb" | grep -q "voz natural" && ok "baixa a voz natural para o cache" || falha "download: $(ls "$TMP/cache/claude-ui" 2>&1)"
+	[ -e "$TMP/cache/hive-ui/vits-piper-pt_BR-faber-medium/pt_BR-faber-medium.onnx" ] && ! ls "$TMP/cache/hive-ui" | grep -q baixando \
+		&& ! T capture-pane -p -t "$sb" | grep -q "voz natural" && ok "baixa a voz natural para o cache" || falha "download: $(ls "$TMP/cache/hive-ui" 2>&1)"
 	resposta "$transcript" false "natural"; sleep 2
 	[ "$(cat "$TMP/falado" 2>/dev/null)" = "natural." ] && T capture-pane -p -t "$sb" | grep -q "usando a do sistema" \
 		&& ok "voz natural quebrada cai para a do sistema" || falha "fallback: $(cat "$TMP/falado" 2>/dev/null) | $(T capture-pane -p -t "$sb" | tail -4)"
@@ -472,8 +472,8 @@ if [ -n "$NATURAL" ]; then
 	# Com a leitura ligada, o ditado a deixa muda.
 	tecla v
 	clicar_mic
-	[ -e "$TMP/cache/claude-ui/sherpa-onnx-whisper-turbo/silero_vad.onnx" ] && ! ls "$TMP/cache/claude-ui" | grep -q baixando \
-		&& ok "baixa o modelo do ditado para o cache" || falha "modelo do ditado: $(ls -R "$TMP/cache/claude-ui" 2>&1 | head)"
+	[ -e "$TMP/cache/hive-ui/sherpa-onnx-whisper-turbo/silero_vad.onnx" ] && ! ls "$TMP/cache/hive-ui" | grep -q baixando \
+		&& ok "baixa o modelo do ditado para o cache" || falha "modelo do ditado: $(ls -R "$TMP/cache/hive-ui" 2>&1 | head)"
 	mic | grep -q "◉)" && T capture-pane -p -t "$sb" | grep -q "ouvindo" \
 		&& ok "clique no microfone liga o ditado" || falha "ditado ligado: $(mic)"
 	T capture-pane -p -t "$pane" | grep -q "corrige o teste e roda de novo$" \

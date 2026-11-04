@@ -1,4 +1,4 @@
-# claude-ui
+# hive-ui
 
 Interface para o [Claude Code](https://claude.com/claude-code) no terminal: o `claude` ocupa a maior parte da tela e, ao lado, uma barra lateral lista as conversas abertas na sessão, com o status de cada uma. O visual e várias funções do sidebar se inspiram no [workmux](https://github.com/raine/workmux).
 
@@ -46,8 +46,8 @@ No macOS, o que faltar sai pelo Homebrew: `brew install tmux node ffmpeg`.
 ### 2. Clone e dependências
 
 ```sh
-git clone https://github.com/ghts2110/claude-ui.git ~/claude-ui
-cd ~/claude-ui && npm install
+git clone https://github.com/ghts2110/hive-ui.git ~/hive-ui
+cd ~/hive-ui && npm install
 ```
 
 O `npm install` também traz o [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), que roda a voz da leitura em voz alta e o reconhecimento do ditado no próprio computador. Os modelos em si só são baixados quando você liga cada função (ver [Modelos de voz e ditado](#modelos-de-voz-e-ditado)).
@@ -57,7 +57,7 @@ O `npm install` também traz o [sherpa-onnx](https://github.com/k2-fsa/sherpa-on
 Adicione ao `~/.zshrc` (ou `~/.bashrc`), ajustando o caminho se clonou em outro lugar:
 
 ```sh
-claude() { ~/claude-ui/bin/claude-ui "$@"; }
+claude() { ~/hive-ui/bin/hive "$@"; }
 ```
 
 Abra um terminal novo (ou rode `source ~/.zshrc`) e digite `claude`.
@@ -79,7 +79,7 @@ A leitura em voz alta e o ditado rodam no próprio computador: funcionam offline
 | Leitura em voz alta | [Piper pt_BR faber](https://huggingface.co/rhasspy/piper-voices/tree/main/pt/pt_BR/faber/medium) | a leitura é ligada pela primeira vez | ~67 MB | ~80 MB |
 | Ditado por voz | [Whisper turbo](https://github.com/openai/whisper) e detector de fala Silero | o microfone é ligado pela primeira vez | ~540 MB | ~1 GB |
 
-Os dois ficam em `~/.cache/claude-ui` (ou `$XDG_CACHE_HOME/claude-ui`), uma pasta por modelo. É a única coisa que o claude-ui grava fora do repositório. Apagar a pasta remove os modelos; eles são baixados de novo na próxima vez que a função for ligada. Um download interrompido (terminal fechado no meio) não deixa um modelo pela metade: recomeça do zero na próxima vez.
+Os dois ficam em `~/.cache/hive-ui` (ou `$XDG_CACHE_HOME/hive-ui`), uma pasta por modelo. É a única coisa que o hive-ui grava fora do repositório. Apagar a pasta remove os modelos; eles são baixados de novo na próxima vez que a função for ligada. Um download interrompido (terminal fechado no meio) não deixa um modelo pela metade: recomeça do zero na próxima vez.
 
 No Linux, extrair os modelos precisa do `bzip2`. Os modelos rodam em macOS e Linux, Intel e ARM; em outra plataforma, a leitura usa a voz do sistema e o ditado fica indisponível.
 
@@ -131,7 +131,7 @@ Quando o logo do Claude Code (versão, modelo, plano e pasta) rola para fora da 
 
 ### Uso do plano
 
-No rodapé do sidebar, um anel enche em laranja conforme a janela de 5h do plano Pro/Max é consumida. Com o mouse em cima, ou depois de um clique nele, aparecem a % usada e a hora em que a janela reinicia. O dado vem da statusline do Claude Code, então só muda quando alguma conversa do claude-ui recebe resposta; antes disso, ou com login por API, o anel fica apagado. Se você tem uma statusline própria, ela continua aparecendo.
+No rodapé do sidebar, um anel enche em laranja conforme a janela de 5h do plano Pro/Max é consumida. Com o mouse em cima, ou depois de um clique nele, aparecem a % usada e a hora em que a janela reinicia. O dado vem da statusline do Claude Code, então só muda quando alguma conversa do hive-ui recebe resposta; antes disso, ou com login por API, o anel fica apagado. Se você tem uma statusline própria, ela continua aparecendo.
 
 ### Leitura em voz alta
 
@@ -201,25 +201,25 @@ A interface sempre deixa uma saída para o Claude Code sem nada em volta:
 
 | Mensagem | Causa e solução |
 | --- | --- |
-| `claude-ui: tmux não encontrado. Instale com 'brew install tmux'` | tmux ausente ou fora do PATH. Instale (`brew install tmux`, `apt install tmux`) e abra um terminal novo. |
-| `claude-ui: Node não encontrado. Instale o Node 20+` | Node ausente ou fora do PATH. Confira `command -v node` num terminal novo; com nvm carregado sob demanda (lazy load), carregue-o no início do shell ou rode `nvm alias default 20`. |
-| `claude-ui: dependências faltando. Rode 'npm install' em ...` | Faltou o passo 2: rode `npm install` na pasta clonada. |
-| `claude-ui: Claude Code não encontrado no PATH.` | O binário `claude` não está no PATH. Instale o Claude Code e confira com `command -v claude`. |
-| `no such file or directory: .../bin/claude-ui` (zsh) ou `.../bin/claude-ui: No such file or directory` (bash) | O caminho na função do `~/.zshrc` (ou `~/.bashrc`) não aponta para onde o repositório foi clonado. |
+| `hive: tmux não encontrado. Instale com 'brew install tmux'` | tmux ausente ou fora do PATH. Instale (`brew install tmux`, `apt install tmux`) e abra um terminal novo. |
+| `hive: Node não encontrado. Instale o Node 20+` | Node ausente ou fora do PATH. Confira `command -v node` num terminal novo; com nvm carregado sob demanda (lazy load), carregue-o no início do shell ou rode `nvm alias default 20`. |
+| `hive: dependências faltando. Rode 'npm install' em ...` | Faltou o passo 2: rode `npm install` na pasta clonada. |
+| `hive: Claude Code não encontrado no PATH.` | O binário `claude` não está no PATH. Instale o Claude Code e confira com `command -v claude`. |
+| `no such file or directory: .../bin/hive` (zsh) ou `.../bin/hive: No such file or directory` (bash) | O caminho na função do `~/.zshrc` (ou `~/.bashrc`) não aponta para onde o repositório foi clonado. |
 
 ### No sidebar
 
 | Sintoma | Causa e solução |
 | --- | --- |
 | Conversa sem título e sem status | Título e status vêm de hooks do Claude Code passados com `--settings` (ver `sidebar/hooks.json`). Passar outro `--settings` ou desligar hooks nas suas configurações os desativa. |
-| Anel do uso do plano sempre apagado | Ele só acende depois que uma conversa do claude-ui recebe resposta, e não aparece com login por API. |
+| Anel do uso do plano sempre apagado | Ele só acende depois que uma conversa do hive-ui recebe resposta, e não aparece com login por API. |
 | Nenhum som quando uma conversa termina | Confira o sino do perfil do Terminal.app e o volume de alertas (ver [Permissões e ajustes do macOS](#4-permissões-e-ajustes-do-macos)). |
 | "sem voz natural: usando a do sistema" | O download da voz falhou (sem internet, sem `bzip2` no Linux). A leitura segue com a voz do sistema e tenta baixar de novo na próxima vez que for ligada. |
 | "Sem voz em português do Brasil." | Sem a voz natural e sem voz pt-br no sistema. Instale uma em Ajustes do Sistema > Acessibilidade > Conteúdo Falado > Voz do Sistema > Gerenciar Vozes (Linux: `sudo apt install espeak-ng`). |
 | "Sem gravador de áudio." | Instale o `ffmpeg` (`brew install ffmpeg`); no Linux, `pulseaudio-utils`, `pipewire` (`pw-record`) ou `alsa-utils`. Depois clique no microfone de novo. |
 | "Sem acesso ao microfone." | Libere o Terminal em Ajustes do Sistema > Privacidade e Segurança > Microfone e reabra o Terminal. Se já está liberado, confira o volume de entrada em Ajustes do Sistema > Som > Entrada. |
 | "sem ditado: o download falhou" | Sem internet ou sem `bzip2` no Linux. Clique no microfone para tentar de novo. |
-| "o ditado falhou: clique para tentar" | O modelo não abriu (por exemplo, arquivo corrompido em `~/.cache/claude-ui`). Clique no microfone para tentar de novo; se repetir, apague a pasta do modelo para ele ser baixado outra vez. |
+| "o ditado falhou: clique para tentar" | O modelo não abriu (por exemplo, arquivo corrompido em `~/.cache/hive-ui`). Clique no microfone para tentar de novo; se repetir, apague a pasta do modelo para ele ser baixado outra vez. |
 | "silêncio longo: parei de ouvir" | 20 segundos sem fala desligam o microfone. Ligue de novo quando for falar. |
 
 Enquanto não resolve, `command claude` abre o Claude Code puro.
@@ -227,8 +227,8 @@ Enquanto não resolve, `command claude` abre o Claude Code puro.
 ## Desinstalar
 
 1. Apague a linha `claude() { ... }` do `~/.zshrc` (ou `~/.bashrc`) e abra um terminal novo.
-2. Apague a pasta clonada: `rm -rf ~/claude-ui`.
-3. Apague os modelos da leitura em voz alta e do ditado, se foram baixados: `rm -rf ~/.cache/claude-ui`.
+2. Apague a pasta clonada: `rm -rf ~/hive-ui`.
+3. Apague os modelos da leitura em voz alta e do ditado, se foram baixados: `rm -rf ~/.cache/hive-ui`.
 4. Opcional: tire o acesso do Terminal ao microfone em Ajustes do Sistema > Privacidade e Segurança > Microfone, se só o liberou para o ditado.
 
 Não sobra mais nada: fora esses modelos, o projeto não salva arquivos fora do repositório e cada sessão do tmux morre com o terminal.

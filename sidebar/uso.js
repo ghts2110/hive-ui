@@ -4,7 +4,7 @@
 // que o sidebar desenha como um anel (ver sidebar/anel.js). Traz também as
 // linhas que esta conversa adicionou e removeu (cost), que vão para @linhas no
 // pane dela: o sidebar mostra cada conversa com as suas.
-// O --settings do claude-ui toma o lugar da statusline do usuário: se ele
+// O --settings do hive-ui toma o lugar da statusline do usuário: se ele
 // tiver uma, ela roda com a mesma entrada e a saída dela é a que aparece.
 import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
@@ -63,7 +63,7 @@ if (pane && Number.isFinite(mais) && Number.isFinite(menos)) {
 	} catch {}
 }
 
-// A statusline que valeria sem o claude-ui, na ordem de precedência do Claude
+// A statusline que valeria sem o hive-ui, na ordem de precedência do Claude
 // Code: a local e a do projeto, depois a do usuário. Com disableAllHooks, o
 // Claude Code não a rodaria; a saída só aparece se ela terminar bem.
 const projeto = dados.workspace?.project_dir ?? dados.cwd ?? process.cwd();

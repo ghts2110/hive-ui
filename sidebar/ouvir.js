@@ -18,7 +18,7 @@ const sherpa = createRequire(import.meta.url)('sherpa-onnx-node');
 const pasta = process.argv[2];
 const taxa = 16000;
 // Sem fala por esse tempo, para de ouvir.
-const silencio = Number(process.env.CLAUDE_UI_DITADO_SILENCIO) || 20;
+const silencio = Number(process.env.HIVE_DITADO_SILENCIO) || 20;
 
 const avisar = evento => {
 	try {

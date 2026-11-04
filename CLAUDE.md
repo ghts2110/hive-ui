@@ -1,4 +1,4 @@
-# claude-ui
+# hive-ui
 
 Sidebar de conversas para o Claude Code no terminal. Visão geral no `README.md`.
 
@@ -7,7 +7,7 @@ Sidebar de conversas para o Claude Code no terminal. Visão geral no `README.md`
 - **tmux** monta o layout: um pane estreito à esquerda (sidebar) e o pane principal com o `claude`.
 - Cada conversa é um processo `claude` em seu próprio pane; trocar de conversa = trocar qual pane ocupa a área principal (`swap-pane`/`join-pane`), sem matar processos.
 - O sidebar é um app Node + Ink que conversa com o tmux via CLI (`tmux list-panes`, `tmux swap-pane`, ...).
-- Sessão do tmux é efêmera: morre quando o terminal fecha (`destroy-unattached`). Nada é salvo em disco pelo projeto, exceto os modelos baixados para `~/.cache/claude-ui`: a voz da leitura em voz alta e o reconhecimento do ditado.
+- Sessão do tmux é efêmera: morre quando o terminal fecha (`destroy-unattached`). Nada é salvo em disco pelo projeto, exceto os modelos baixados para `~/.cache/hive-ui`: a voz da leitura em voz alta e o reconhecimento do ditado.
 
 ## Convenções
 
