@@ -12,7 +12,7 @@ const h = React.createElement;
 const semCor = linha => linha.replace(/\x1b\[[0-9;:]*m/g, '');
 const apagado = '#6b7280';
 
-const claude = (...args) => execFileSync(process.env.CLAUDE_UI_CLAUDE, args, {encoding: 'utf8', stdio: 'pipe', timeout: 10000});
+const claude = (...args) => execFileSync(process.env.HIVE_CLAUDE, args, {encoding: 'utf8', stdio: 'pipe', timeout: 10000});
 // Como no logo: plano da assinatura, cobrança por API ou o provedor (Bedrock,
 // Vertex, ...); o que não se souber fica de fora.
 const planos = {pro: 'Claude Pro', max: 'Claude Max', team: 'Claude Team', enterprise: 'Claude Enterprise'};

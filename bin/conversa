@@ -8,7 +8,7 @@ tmux set -q @proxima $((n + 1))
 tmux set -p -t "$TMUX_PANE" @conversa "$n"
 
 # Hooks marcam título e status da conversa para o sidebar.
-"$CLAUDE_UI_CLAUDE" --settings "$CLAUDE_UI_ROOT/sidebar/hooks.json" "$@"
+"$HIVE_CLAUDE" --settings "$HIVE_ROOT/sidebar/hooks.json" "$@"
 status=$?
 
 # Erro ao abrir o claude: deixa a mensagem na tela antes de fechar.

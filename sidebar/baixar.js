@@ -1,6 +1,6 @@
 // Modelos baixados na primeira vez que são usados: a voz natural da leitura
 // (sidebar/voz.js) e o reconhecimento do ditado (sidebar/ditado.js). Ficam
-// no cache do usuário: a única coisa que o claude-ui guarda em disco.
+// no cache do usuário: a única coisa que o hive-ui guarda em disco.
 import {spawn} from 'node:child_process';
 import {createWriteStream, existsSync, mkdirSync, readdirSync, renameSync, rmSync} from 'node:fs';
 import {homedir} from 'node:os';
@@ -8,7 +8,7 @@ import {join} from 'node:path';
 import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
-export const cache = join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'claude-ui');
+export const cache = join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'hive-ui');
 
 // Modelo completo: todos os arquivos na pasta dele.
 export const tem = (pasta, arquivos) => arquivos.every(f => existsSync(join(pasta, f)));

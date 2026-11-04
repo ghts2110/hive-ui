@@ -16,11 +16,11 @@ const nome = 'sherpa-onnx-whisper-turbo';
 const pasta = join(cache, nome);
 const arquivos = ['turbo-encoder.int8.onnx', 'turbo-decoder.int8.onnx', 'turbo-tokens.txt', 'silero_vad.onnx'];
 const modelos = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models';
-const url = process.env.CLAUDE_UI_DITADO_URL || `${modelos}/${nome}.tar.bz2`;
-const urlVad = process.env.CLAUDE_UI_VAD_URL || `${modelos}/silero_vad.onnx`;
+const url = process.env.HIVE_DITADO_URL || `${modelos}/${nome}.tar.bz2`;
+const urlVad = process.env.HIVE_VAD_URL || `${modelos}/silero_vad.onnx`;
 // Nos testes, um ouvinte falso no lugar do ouvir.js.
-const ouvinte = process.env.CLAUDE_UI_OUVIR
-	? [process.env.CLAUDE_UI_OUVIR]
+const ouvinte = process.env.HIVE_OUVIR
+	? [process.env.HIVE_OUVIR]
 	: [process.execPath, fileURLToPath(new URL('ouvir.js', import.meta.url))];
 
 export const temModelo = () => suportaNatural && tem(pasta, arquivos);

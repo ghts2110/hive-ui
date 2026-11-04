@@ -60,7 +60,7 @@ try {
 	let fila = Promise.resolve();
 	for (const [i, frase] of frases.entries()) {
 		const audio = await tts.generateAsync({text: frase, sid: 0, speed: 1});
-		const arquivo = join(tmpdir(), `claude-ui-fala-${process.pid}-${i}.wav`);
+		const arquivo = join(tmpdir(), `hive-fala-${process.pid}-${i}.wav`);
 		arquivos.add(arquivo);
 		sherpa.writeWave(arquivo, {samples: audio.samples, sampleRate: audio.sampleRate});
 		fila = fila.then(() => tocar(arquivo)).then(() => {

@@ -24,7 +24,7 @@ const nome = 'vits-piper-pt_BR-faber-medium';
 const pastaNatural = join(cache, nome);
 const modelo = 'pt_BR-faber-medium.onnx';
 const arquivos = [modelo, 'tokens.txt', 'espeak-ng-data'];
-const url = process.env.CLAUDE_UI_VOZ_URL || `https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/${nome}.tar.bz2`;
+const url = process.env.HIVE_VOZ_URL || `https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/${nome}.tar.bz2`;
 
 // Sem carregar o binário no sidebar: só confere que o npm instalou o da
 // plataforma, ao lado do sherpa-onnx-node.
