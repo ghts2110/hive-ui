@@ -1,13 +1,13 @@
 # hive-ui
 
-Interface para o [Claude Code](https://claude.com/claude-code) no terminal: o `claude` ocupa a maior parte da tela e, ao lado, uma barra lateral lista as conversas abertas na sessão, com o status de cada uma. O visual e várias funções do sidebar se inspiram no [workmux](https://github.com/raine/workmux).
+Interface para o [Claude Code](https://claude.com/claude-code) no terminal: o Claude Code ocupa a maior parte da tela e, ao lado, uma barra lateral lista as conversas abertas na sessão, com o status de cada uma. O visual e várias funções do sidebar se inspiram no [workmux](https://github.com/raine/workmux).
 
 ![Três conversas: uma esperando resposta, uma pronta e uma trabalhando; troca entre elas pelo sidebar](docs/demo.gif)
 
-- Digitar `claude` no terminal já abre a interface.
+- Digitar `hive` no terminal abre a interface.
 - Cada conversa é um `claude` real rodando em segundo plano; escolher uma no sidebar a traz para a área principal sem perder o estado das outras.
 - Nada das conversas é salvo: ao fechar o terminal, elas somem do sidebar.
-- `command claude` continua abrindo o Claude Code puro, sem a interface.
+- `claude` continua abrindo o Claude Code puro, sem a interface.
 
 ## Sumário
 
@@ -52,15 +52,17 @@ cd ~/hive-ui && npm install
 
 O `npm install` também traz o [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), que roda a voz da leitura em voz alta e o reconhecimento do ditado no próprio computador. Os modelos em si só são baixados quando você liga cada função (ver [Modelos de voz e ditado](#modelos-de-voz-e-ditado)).
 
-### 3. Função no shell
+### 3. Comando `hive`
 
 Adicione ao `~/.zshrc` (ou `~/.bashrc`), ajustando o caminho se clonou em outro lugar:
 
 ```sh
-claude() { ~/hive-ui/bin/hive "$@"; }
+alias hive=~/hive-ui/bin/hive
 ```
 
-Abra um terminal novo (ou rode `source ~/.zshrc`) e digite `claude`.
+Abra um terminal novo (ou rode `source ~/.zshrc`) e digite `hive`. O `claude` não é tocado: continua abrindo o Claude Code puro.
+
+**Vindo de uma versão antiga?** Antes a interface abria por uma função `claude() { ... }` no `~/.zshrc` (ou `~/.bashrc`). Apague essa linha e use o `alias` acima no lugar, para o `claude` voltar a ser o Claude Code puro. Enquanto ela ficar, o `claude` segue abrindo a interface sem entrar em recursão, se apontar para `.../bin/hive`; se apontar para o antigo `.../bin/claude-ui`, que não existe mais, dá `no such file or directory`.
 
 ### 4. Permissões e ajustes do macOS
 
@@ -85,7 +87,7 @@ No Linux, extrair os modelos precisa do `bzip2`. Os modelos rodam em macOS e Lin
 
 ## Primeiro uso
 
-`claude` abre a interface com uma conversa. Argumentos são repassados ao Claude Code (`claude --continue`, `claude "corrige o teste"`) e valem só para essa primeira conversa.
+`hive` abre a interface com uma conversa do Claude Code. Argumentos são repassados a ele (`hive --continue`, `hive "corrige o teste"`) e valem só para essa primeira conversa.
 
 ![Interface recém-aberta: sidebar com uma conversa nova e o Claude Code ao lado](docs/inicio.png)
 
@@ -191,9 +193,9 @@ Fora `Ctrl-\`, `Ctrl-T`, `Ctrl-W` e `Ctrl-Q` (e `Esc`/`Ctrl-C`, que calam a fala
 
 A interface sempre deixa uma saída para o Claude Code sem nada em volta:
 
-- `command claude` abre o Claude Code puro, sem a interface.
-- Rodar `claude` dentro da interface (ou de qualquer tmux) também abre o Claude Code puro.
-- Modos não interativos e subcomandos (`-p`, `--version`, `--help`, `mcp`, `update`, `doctor`, ...) e uso em pipes ou scripts rodam o Claude Code puro, para a saída não sumir com o tmux.
+- `claude` abre sempre o Claude Code puro, sem a interface: o hive-ui não o intercepta.
+- Rodar `hive` dentro da interface (ou de qualquer tmux) também abre o Claude Code puro.
+- Com o `hive`, modos não interativos e subcomandos (`-p`, `--version`, `--help`, `mcp`, `update`, `doctor`, ...) e uso em pipes ou scripts rodam o Claude Code puro, para a saída não sumir com o tmux.
 
 ## Problemas comuns
 
@@ -205,7 +207,7 @@ A interface sempre deixa uma saída para o Claude Code sem nada em volta:
 | `hive: Node não encontrado. Instale o Node 20+` | Node ausente ou fora do PATH. Confira `command -v node` num terminal novo; com nvm carregado sob demanda (lazy load), carregue-o no início do shell ou rode `nvm alias default 20`. |
 | `hive: dependências faltando. Rode 'npm install' em ...` | Faltou o passo 2: rode `npm install` na pasta clonada. |
 | `hive: Claude Code não encontrado no PATH.` | O binário `claude` não está no PATH. Instale o Claude Code e confira com `command -v claude`. |
-| `no such file or directory: .../bin/hive` (zsh) ou `.../bin/hive: No such file or directory` (bash) | O caminho na função do `~/.zshrc` (ou `~/.bashrc`) não aponta para onde o repositório foi clonado. |
+| `no such file or directory: .../bin/hive` (zsh) ou `.../bin/hive: No such file or directory` (bash) | O caminho no `alias hive` do `~/.zshrc` (ou `~/.bashrc`) não aponta para onde o repositório foi clonado. |
 
 ### No sidebar
 
@@ -222,11 +224,11 @@ A interface sempre deixa uma saída para o Claude Code sem nada em volta:
 | "o ditado falhou: clique para tentar" | O modelo não abriu (por exemplo, arquivo corrompido em `~/.cache/hive-ui`). Clique no microfone para tentar de novo; se repetir, apague a pasta do modelo para ele ser baixado outra vez. |
 | "silêncio longo: parei de ouvir" | 20 segundos sem fala desligam o microfone. Ligue de novo quando for falar. |
 
-Enquanto não resolve, `command claude` abre o Claude Code puro.
+Enquanto não resolve, `claude` abre o Claude Code puro.
 
 ## Desinstalar
 
-1. Apague a linha `claude() { ... }` do `~/.zshrc` (ou `~/.bashrc`) e abra um terminal novo.
+1. Apague a linha `alias hive=...` do `~/.zshrc` (ou `~/.bashrc`), e a função antiga `claude() { ... }` se ainda estiver lá, e abra um terminal novo.
 2. Apague a pasta clonada: `rm -rf ~/hive-ui`.
 3. Apague os modelos da leitura em voz alta e do ditado, se foram baixados: `rm -rf ~/.cache/hive-ui`.
 4. Opcional: tire o acesso do Terminal ao microfone em Ajustes do Sistema > Privacidade e Segurança > Microfone, se só o liberou para o ditado.
@@ -239,7 +241,7 @@ Não sobra mais nada: fora esses modelos, o projeto não salva arquivos fora do 
 - **Node + [Ink](https://github.com/vadimdemedes/ink)** desenha o sidebar, que conversa com o tmux pela linha de comando.
 - **Hooks e statusline do Claude Code** avisam o sidebar quando uma conversa muda de status, ganha título ou edita arquivos, e trazem o uso do plano.
 - **[sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)** roda a voz da leitura e o reconhecimento do ditado localmente.
-- Uma função no `~/.zshrc` (ou `~/.bashrc`) troca o `claude` pelo launcher do projeto, que chama o binário original com `command claude`.
+- O `hive` é um alias para o launcher do projeto (`bin/hive`), que abre o tmux e chama o binário `claude` do PATH; o `claude` em si não é interceptado.
 
 Testes do launcher: `npm test`.
 
