@@ -4,7 +4,14 @@
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd -P)
 
-# Binário original, nunca a função do ~/.zshrc.
+# O primeiro argumento pode escolher a IA da conversa (hoje só o Claude Code,
+# o padrão); fica o espaço para `hive codex` e outras.
+case $1 in
+	claude) shift ;;
+esac
+
+# Binário original, nunca a função antiga `claude()` do ~/.zshrc, que chama
+# este launcher: o sh não herda funções do zsh, então não há recursão.
 CLAUDE_BIN=$(command -v claude)
 if [ -z "$CLAUDE_BIN" ]; then
 	echo "hive: Claude Code não encontrado no PATH." >&2
@@ -32,14 +39,14 @@ done
 
 if ! command -v tmux >/dev/null 2>&1; then
 	echo "hive: tmux não encontrado. Instale com 'brew install tmux'" >&2
-	echo "ou use 'command claude' para abrir o Claude Code sem a interface." >&2
+	echo "ou use 'claude' para abrir o Claude Code sem a interface." >&2
 	exit 1
 fi
 
 NODE_BIN=$(command -v node)
 if [ -z "$NODE_BIN" ]; then
 	echo "hive: Node não encontrado. Instale o Node 20+" >&2
-	echo "ou use 'command claude' para abrir o Claude Code sem a interface." >&2
+	echo "ou use 'claude' para abrir o Claude Code sem a interface." >&2
 	exit 1
 fi
 

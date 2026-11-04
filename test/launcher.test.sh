@@ -115,6 +115,19 @@ PATH="$FAKE:$PATH" TMUX= HIVE= script -q /dev/null "$ROOT/bin/hive" mcp list </d
 [ "$(cat "$TMP/args" | tr '\n' ' ')" = "mcp list " ] && ! servidor_vivo \
 	&& ok "subcomando roda o claude puro" || falha "subcomando roda o claude puro"
 
+# `hive claude` escolhe o Claude Code, que é o padrão: o nome não chega a ele.
+: > "$TMP/args"
+PATH="$FAKE:$PATH" HIVE=1 "$ROOT/bin/hive" claude -v
+[ "$(cat "$TMP/args")" = "-v" ] \
+	&& ok "hive claude escolhe o Claude Code" || falha "hive claude escolhe o Claude Code"
+
+# A função antiga `claude()` do ~/.zshrc continua abrindo o launcher sem recursão.
+: > "$TMP/args"
+PATH="$FAKE:$PATH" HIVE=1 HIVE_BIN="$ROOT/bin/hive" zsh -fc 'claude() { "$HIVE_BIN" "$@"; }; claude -v'
+[ "$(cat "$TMP/args")" = "-v" ] \
+	&& ok "função antiga claude() não entra em recursão" \
+	|| falha "função antiga claude() não entra em recursão"
+
 # Sem tmux: mensagem clara.
 SEM_TMUX="$TMP/sem-tmux"; mkdir -p "$SEM_TMUX"
 ln -s "$FAKE/claude" "$SEM_TMUX/claude"
