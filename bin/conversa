@@ -8,6 +8,10 @@ n=${n:-1}
 tmux set -q @proxima $((n + 1))
 tmux set -p -t "$TMUX_PANE" @conversa "$n"
 ia=${HIVE_IA:-claude}
+# No Codex, começa sem título (antes de marcar a IA, para o sidebar não tomar
+# o título padrão do pane pelo nome da conversa): o que ele escrever nele é
+# o nome dela.
+[ "$ia" = codex ] && printf '\033]2;\033\\'
 tmux set -p -t "$TMUX_PANE" @ia "$ia"
 
 # Hooks marcam título e status da conversa para o sidebar. No Codex, vão por
@@ -21,8 +25,6 @@ if [ "$ia" = codex ]; then
 	done <<-OPCOES
 	$("$HIVE_NODE" "$HIVE_ROOT/sidebar/codex.js")
 	OPCOES
-	# Começa sem título: o que o Codex escrever nele é o nome da conversa.
-	printf '\033]2;\033\\'
 	codex=$(command -v codex)
 	case $codex in /*) ;; *) codex= ;; esac
 	if [ -z "$codex" ]; then

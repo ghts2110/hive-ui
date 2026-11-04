@@ -310,6 +310,14 @@ hook "$pane" trabalhando '{"prompt":"fim;"}'
 	|| falha "título com ;: $(T show -pv -t "$pane" @titulo)"
 [ "$(T show -pv -t "$pane" @desde)" -gt 0 ] 2>/dev/null && item "fim;" | grep -q "0:0" \
 	&& ok "status guarda desde quando e o sidebar mostra o tempo" || falha "desde: $(item 'fim;')"
+# Codex: o fim de um pedido ao modelo só vira pronto quando falhou.
+hook "$pane" pronto '{"hook_event_name":"PostModelRequest","status":"completed"}'
+[ "$(T show -pv -t "$pane" @status)" = trabalhando ] && ok "pedido ao modelo que deu certo não muda o status" \
+	|| falha "PostModelRequest completed: $(T show -pv -t "$pane" @status)"
+hook "$pane" pronto '{"hook_event_name":"PostModelRequest","status":"failed"}'
+[ "$(T show -pv -t "$pane" @status)" = pronto ] && ok "pedido ao modelo que falhou passa a pronto" \
+	|| falha "PostModelRequest failed: $(T show -pv -t "$pane" @status)"
+hook "$pane" trabalhando '{}'
 
 # O assunto que o claude põe no título do terminal vira o título; depois do
 # /clear, o antigo é ignorado.
@@ -571,6 +579,7 @@ codex=$(T list-panes -t "$sb" -F '#{pane_id} #{@conversa}' | awk '$2 { print $1 
 [ "$(T show -pv -t "$codex" @ia)" = codex ] && [ "$(conversas)" = "1 2 " ] && grep -qx "HIVE_IA=codex" "$TMP/codex-env" \
 	&& ok "c abre conversa do codex na área principal" || falha "c: $(conversas)/$(cat "$TMP/codex-env" 2>/dev/null)"
 grep -qx -- "--no-daemon" "$TMP/codex-args" && grep -q '^hooks\.Stop=.*status.js\\" pronto' "$TMP/codex-args" \
+	&& grep -q '^hooks\.PreToolUse=.*matcher="request_user_input".*esperando' "$TMP/codex-args" \
 	&& grep -q '^hooks\.state=.*:stop:0:0"={trusted_hash="sha256:' "$TMP/codex-args" \
 	&& ok "codex recebe os hooks de status e a confiança neles" || falha "args do codex: $(tr '\n' '|' < "$TMP/codex-args")"
 sleep 1

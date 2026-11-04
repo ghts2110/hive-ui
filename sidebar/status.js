@@ -21,6 +21,9 @@ try {
 	entrada = JSON.parse(readFileSync(0, 'utf8') || '{}');
 } catch {}
 const janela = alvo => tmux('display', '-p', '-t', alvo, '#{window_id}');
+// No Codex, o fim de cada pedido ao modelo (ver sidebar/codex.js) só conta
+// quando falhou: a resposta acabou sem o Stop.
+if (entrada.hook_event_name === 'PostModelRequest' && entrada.status !== 'failed') process.exit();
 try {
 	if (estado === 'limpar') {
 		for (const opcao of ['@status', '@desde', '@novo', '@titulo', '@linhas']) tmux('set', '-pu', '-t', pane, opcao);

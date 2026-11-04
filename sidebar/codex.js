@@ -11,15 +11,20 @@
 import {createHash} from 'node:crypto';
 
 const status = estado => `"$HIVE_NODE" "$HIVE_ROOT/sidebar/status.js" ${estado}`;
-// Evento, estado e, quando há, o matcher. O Interrupt (Esc, Ctrl-C) tem
-// prazo de no máximo 3s; os outros, o mesmo.
+// Evento, estado e, quando há, o matcher (a pergunta do Codex a você é a
+// ferramenta request_user_input). O Interrupt (Esc, Ctrl-C) tem
+// prazo de no máximo 3s; os outros, o mesmo. O Codex não roda o Stop quando
+// a resposta falha (limite do plano, rede): o PostModelRequest, em segundo
+// plano para não atrasar a resposta, cobre esse caso (ver sidebar/status.js).
 const hooks = [
 	['UserPromptSubmit', 'user_prompt_submit', 'trabalhando'],
 	['PostToolUse', 'post_tool_use', 'trabalhando'],
 	['PermissionRequest', 'permission_request', 'esperando'],
+	['PreToolUse', 'pre_tool_use', 'esperando', 'request_user_input'],
 	['Stop', 'stop', 'pronto'],
 	['Interrupt', 'interrupt', 'pronto'],
 	['SessionStart', 'session_start', 'limpar', 'clear'],
+	['PostModelRequest', 'post_model_request', 'pronto', undefined, true],
 ];
 const prazo = 3;
 
@@ -29,8 +34,8 @@ const ordenado = valor => Array.isArray(valor)
 	: valor && typeof valor === 'object'
 	? Object.fromEntries(Object.keys(valor).sort().map(chave => [chave, ordenado(valor[chave])]))
 	: valor;
-const hash = (evento, matcher, comando) => {
-	const handler = {type: 'command', command: comando, timeout: prazo, async: false};
+const hash = (evento, matcher, comando, async) => {
+	const handler = {type: 'command', command: comando, timeout: prazo, async};
 	const identidade = {event_name: evento, ...(matcher && {matcher}), hooks: [handler]};
 	return 'sha256:' + createHash('sha256').update(JSON.stringify(ordenado(identidade))).digest('hex');
 };
@@ -39,10 +44,10 @@ const hash = (evento, matcher, comando) => {
 const origem = '/<session-flags>/config.toml';
 const toml = JSON.stringify;
 const confianca = [];
-for (const [evento, chave, estado, matcher] of hooks) {
+for (const [evento, chave, estado, matcher, async = false] of hooks) {
 	const comando = status(estado);
-	const grupo = `${matcher ? `matcher=${toml(matcher)}, ` : ''}hooks=[{type="command", command=${toml(comando)}, timeout=${prazo}}]`;
+	const grupo = `${matcher ? `matcher=${toml(matcher)}, ` : ''}hooks=[{type="command", command=${toml(comando)}, timeout=${prazo}, async=${async}}]`;
 	console.log(`hooks.${evento}=[{${grupo}}]`);
-	confianca.push(`${toml(`${origem}:${chave}:0:0`)}={trusted_hash=${toml(hash(chave, matcher, comando))}}`);
+	confianca.push(`${toml(`${origem}:${chave}:0:0`)}={trusted_hash=${toml(hash(chave, matcher, comando, async))}}`);
 }
 console.log(`hooks.state={${confianca.join(', ')}}`);
