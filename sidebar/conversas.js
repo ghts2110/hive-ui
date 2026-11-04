@@ -16,11 +16,11 @@ export const naTela = sidebar => tmux('list-panes', '-t', sidebar, '-F', '#{pane
 // as linhas que ela mudou, da statusline (ver sidebar/uso.js).
 export function ler(sidebar) {
 	const janela = tmux('display', '-p', '-t', sidebar, '#{window_id}');
-	const conversas = tmux('list-panes', '-s', '-t', sidebar, '-F', '#{pane_id}\t#{@conversa}\t#{window_id}\t#{@status}\t#{@desde}\t#{@novo}\t#{@titulo}\t#{pane_title}\t#{@topico_velho}\t#{pane_current_path}\t#{@transcript}\t#{@linhas}')
+	const conversas = tmux('list-panes', '-s', '-t', sidebar, '-F', '#{pane_id}\t#{@conversa}\t#{window_id}\t#{@status}\t#{@desde}\t#{@novo}\t#{@titulo}\t#{pane_title}\t#{@topico_velho}\t#{pane_current_path}\t#{@transcript}\t#{@linhas}\t#{@ia}')
 		.split('\n')
 		.map(linha => linha.split('\t'))
 		.filter(([, n]) => n)
-		.map(([id, n, w, status, desde, novo, titulo, painel, velho, pasta, transcript, linhas]) => ({
+		.map(([id, n, w, status, desde, novo, titulo, painel, velho, pasta, transcript, linhas, ia]) => ({
 			id,
 			n: Number(n),
 			naTela: w === janela,
@@ -28,7 +28,7 @@ export function ler(sidebar) {
 			desde: Number(desde) || undefined,
 			novo: novo === '1',
 			// O spinner troca o ✳ enquanto trabalha: compara só o assunto.
-			titulo: (topico(painel) !== topico(velho) && topico(painel)) || titulo || 'nova conversa',
+			titulo: (topico(painel, ia) !== topico(velho, ia) && topico(painel, ia)) || titulo || 'nova conversa',
 			pasta,
 			transcript,
 			mudancas: mudancas(linhas),
@@ -50,16 +50,27 @@ function mudancas(linhas) {
 // O Claude Code põe no título do terminal o assunto da conversa, resumido
 // por ele ("✳ Corrige teste de login"; trabalhando, um spinner no lugar do
 // ✳). Como no workmux, é o melhor título; sem ele (antes da primeira
-// resposta ou com o título desligado), fica a primeira mensagem.
-export function topico(titulo) {
+// resposta ou com o título desligado), fica a primeira mensagem. No Codex, o
+// título do terminal só tem o nome que ele dá à conversa (ver bin/conversa).
+export function topico(titulo, ia) {
+	if (ia === 'codex') return titulo.trim() || undefined;
 	if (!/^[\u2800-\u28ff✳]/.test(titulo)) return;
 	const texto = titulo.replace(/^[\u2800-\u28ff✳\s]+/, '').trim();
 	if (texto && !texto.startsWith('Claude Code')) return texto;
 }
 
-export function criar(sidebar) {
+// A IA da conversa (ver bin/conversa): claude, o padrão, ou codex.
+export const temCodex = () => {
+	try {
+		return execFileSync('sh', ['-c', 'command -v codex'], {encoding: 'utf8', stdio: 'pipe'}).startsWith('/');
+	} catch {
+		return false;
+	}
+};
+
+export function criar(sidebar, ia = 'claude') {
 	const sessao = tmux('display', '-p', '-t', sidebar, '#{session_id}');
-	return tmux('new-window', '-d', '-t', `${sessao}:`, '-P', '-F', '#{pane_id}', '--', conversa);
+	return tmux('new-window', '-d', '-t', `${sessao}:`, '-e', `HIVE_IA=${ia}`, '-P', '-F', '#{pane_id}', '--', conversa);
 }
 
 // Traz a conversa para a área principal; a que estava lá vai para a janela dela.
@@ -112,8 +123,8 @@ export function abrir(sidebar, id) {
 	tmux('select-pane', '-t', id);
 }
 
-export function nova(sidebar) {
-	const id = criar(sidebar);
+export function nova(sidebar, ia) {
+	const id = criar(sidebar, ia);
 	abrir(sidebar, id);
 	return id;
 }

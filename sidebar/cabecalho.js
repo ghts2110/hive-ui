@@ -35,7 +35,12 @@ const vistos = new Set();
 function ler() {
 	const sidebar = tmux('show', '-qv', '@sidebar');
 	const id = naTela(sidebar);
-	const [historico, pasta] = tmux('display', '-p', '-t', id, '#{history_size}\t#{pane_current_path}').split('\t');
+	const [historico, pasta, ia] = tmux('display', '-p', '-t', id, '#{history_size}\t#{pane_current_path}\t#{@ia}').split('\t');
+	// O cabeçalho é o do Claude Code: numa conversa do Codex, fica guardado.
+	if (ia === 'codex') {
+		posicionar(sidebar, id, false);
+		return {};
+	}
 	const inicio = -Number(historico);
 	// Sem o trim do tmux(): o espaço no começo da primeira linha alinha o mascote.
 	const linhas = execFileSync('tmux', ['capture-pane', '-p', '-e', '-t', id, '-S', String(inicio), '-E', String(inicio + 15)], {encoding: 'utf8'}).split('\n');

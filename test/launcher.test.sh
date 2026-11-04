@@ -42,6 +42,17 @@ sleep "\${FAKE_SLEEP:-0}" & wait \$!
 FAKE
 chmod +x "$FAKE/claude"
 
+# codex falso: grava argumentos, a IA pedida e o título inicial do terminal,
+# depois espera.
+cat > "$FAKE/codex" <<FAKE
+#!/bin/sh
+printf '%s\n' "\$@" > "$TMP/codex-args"
+echo "HIVE_IA=\$HIVE_IA" > "$TMP/codex-env"
+trap 'exit 0' TERM
+while :; do sleep 1; done
+FAKE
+chmod +x "$FAKE/codex"
+
 # caffeinate falso: grava argumentos e espera o processo do -w sair. Ignora
 # SIGHUP: no teste o cliente do tmux lidera o pty e a morte dele mandaria HUP
 # ao caffeinate, o que não acontece com o launcher rodando num shell.
@@ -88,10 +99,10 @@ falha() { echo "FAIL - $1"; falhas=$((falhas + 1)); }
 T() { tmux -L "$HIVE_SOCKET" "$@"; }
 servidor_vivo() { T ls >/dev/null 2>&1; }
 
-# Abre o launcher num pty de 120x30, em segundo plano.
+# Abre o launcher num pty de 120x30, em segundo plano. CAMINHO troca o PATH.
 abrir() {
 	FAKE_SLEEP=$1; shift
-	FAKE_SLEEP=$FAKE_SLEEP FAKE_LOGO=1 PATH="$FAKE:$PATH" TMUX= HIVE= \
+	FAKE_SLEEP=$FAKE_SLEEP FAKE_LOGO=1 PATH="${CAMINHO:-$FAKE:$PATH}" TMUX= HIVE= \
 		script -q /dev/null sh -c 'stty cols 120 rows 30; exec "$0" "$@"' \
 		"${LAUNCHER:-$ROOT/bin/hive}" "$@" </dev/null >/dev/null 2>&1 &
 	PID=$!
@@ -435,6 +446,12 @@ hook "$pane" trabalhando "{\"transcript_path\":\"$transcript\",\"hook_event_name
 rm -f "$TMP/falado"
 resposta "$transcript" true "subagente"
 [ ! -e "$TMP/falado" ] && ok "subagente não é lido" || falha "subagente: $(cat "$TMP/falado")"
+# No transcript do Codex, o texto dele vem nas mensagens do assistente.
+printf '{"timestamp":"t","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"pedido"}]}}\n' >> "$transcript"
+printf '{"timestamp":"t","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Feito, **pronto**."}]}}\n' >> "$transcript"; sleep 1
+[ "$(cat "$TMP/falado" 2>/dev/null)" = "Feito, pronto." ] && ok "texto do codex é falado" \
+	|| falha "codex falado: $(cat "$TMP/falado" 2>/dev/null)"
+rm -f "$TMP/falado"
 # A conversa fora da tela fica em silêncio.
 outro=$(T list-panes -s -t hive -F '#{pane_id} #{window_id} #{@conversa}' |
 	awk -v w="$(janela "$sb")" '$3 && $2 != w { print $1; exit }')
@@ -537,6 +554,46 @@ cafeina_viva && falha "fechar o terminal solta o caffeinate" || ok "fechar o ter
 abrir 90
 kill -KILL "$(T list-clients -F '#{client_pid}')"; sleep 1
 cafeina_viva && falha "crash solta o caffeinate" || ok "crash solta o caffeinate"
+T kill-server 2>/dev/null; wait "$PID" 2>/dev/null
+
+# Conversa do Codex pelo c do sidebar: hooks de status por -c, cada um com
+# o hash que o Codex confere (ver sidebar/codex.js), sem o cabeçalho do
+# Claude Code; o nome que o Codex põe no título do terminal vira o título.
+abrir 90
+sb=$(T show -v @sidebar)
+cab=$(T show -v @cabecalho)
+conversa=$(T list-panes -t "$sb" -F '#{pane_id} #{@conversa}' | awk '$2 { print $1 }')
+for _ in $(seq 40); do T send-keys -t "$conversa" Enter; done
+sleep 1.5
+[ "$(janela "$cab")" = "$(janela "$sb")" ] || falha "cabeçalho não apareceu antes do codex"
+tecla c
+codex=$(T list-panes -t "$sb" -F '#{pane_id} #{@conversa}' | awk '$2 { print $1 }')
+[ "$(T show -pv -t "$codex" @ia)" = codex ] && [ "$(conversas)" = "1 2 " ] && grep -qx "HIVE_IA=codex" "$TMP/codex-env" \
+	&& ok "c abre conversa do codex na área principal" || falha "c: $(conversas)/$(cat "$TMP/codex-env" 2>/dev/null)"
+grep -qx -- "--no-daemon" "$TMP/codex-args" && grep -q '^hooks\.Stop=.*status.js\\" pronto' "$TMP/codex-args" \
+	&& grep -q '^hooks\.state=.*:stop:0:0"={trusted_hash="sha256:' "$TMP/codex-args" \
+	&& ok "codex recebe os hooks de status e a confiança neles" || falha "args do codex: $(tr '\n' '|' < "$TMP/codex-args")"
+sleep 1
+[ "$(janela "$cab")" != "$(janela "$sb")" ] && ok "conversa do codex fica sem o cabeçalho do claude" \
+	|| falha "cabeçalho na conversa do codex"
+item "○ nova conversa" >/dev/null && ok "codex sem nome tem título provisório" || falha "título codex: $(T capture-pane -p -t "$sb")"
+T select-pane -t "$codex" -T "Revisa o parser"; sleep 1.5
+item "Revisa o parser" >/dev/null && ok "nome do codex vira o título" || falha "nome codex: $(T capture-pane -p -t "$sb")"
+T kill-server 2>/dev/null; wait "$PID" 2>/dev/null
+
+# Sem o Codex instalado: o c diz como instalar. Só o node no PATH, além do
+# sistema e do claude falso.
+mkdir -p "$TMP/sem-codex"
+ln -s "$(command -v node)" "$TMP/sem-codex/node"
+ln -s "$FAKE/claude" "$TMP/sem-codex/claude"
+ln -s "$(command -v tmux)" "$TMP/sem-codex/tmux"
+CAMINHO="$TMP/sem-codex:/usr/bin:/bin"
+abrir 90
+CAMINHO=
+sb=$(T show -v @sidebar)
+tecla c
+T capture-pane -p -t "$sb" | grep -q "Codex não encontrado" && [ "$(conversas)" = "1 " ] \
+	&& ok "sem codex, c diz como instalar" || falha "sem codex: $(T capture-pane -p -t "$sb")"
 T kill-server 2>/dev/null; wait "$PID" 2>/dev/null
 
 # Instalado pelo `npm link`, o `hive` do PATH é um link relativo, como o do
