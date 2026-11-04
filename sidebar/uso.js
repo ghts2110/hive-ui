@@ -26,15 +26,18 @@ try {
 // o que outra já sabe. O uso é da conta, então vale para todas. Uma conversa
 // parada reroda a statusline (cache vencido, troca de modo) com o dado da
 // última resposta dela: só vale um dado mais novo, de uma janela de 5h
-// posterior ou, na mesma janela, com % maior (ela só sobe).
+// posterior ou, na mesma janela, com % maior (ela só sobe), ou a mesma % com
+// a semanal maior ou que ainda não estava lá.
 const janela = dados.rate_limits?.five_hour;
 const semana = dados.rate_limits?.seven_day;
 if (Number.isFinite(janela?.used_percentage) && Number.isFinite(janela?.resets_at)) {
 	try {
 		let uso = `${janela.used_percentage} ${janela.resets_at}`;
 		if (Number.isFinite(semana?.used_percentage) && Number.isFinite(semana?.resets_at)) uso += ` ${semana.used_percentage} ${semana.resets_at}`;
-		const [usado, reinicia] = tmux('show', '-qv', '@uso').split(' ').map(Number);
-		const novo = !(reinicia >= janela.resets_at) || (reinicia === janela.resets_at && janela.used_percentage > usado);
+		const [usado, reinicia, usadoSemana] = tmux('show', '-qv', '@uso').split(' ').map(Number);
+		const mesma = reinicia === janela.resets_at;
+		const semanaSubiu = Number.isFinite(semana?.used_percentage) && !(usadoSemana >= semana.used_percentage);
+		const novo = !(reinicia >= janela.resets_at) || (mesma && janela.used_percentage > usado) || (mesma && janela.used_percentage === usado && semanaSubiu);
 		if (novo) {
 			tmux('set', '-q', '@uso', uso);
 			process.kill(Number(tmux('display', '-p', '-t', tmux('show', '-qv', '@sidebar'), '#{pane_pid}')), 'SIGUSR2');

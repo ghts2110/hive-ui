@@ -54,7 +54,7 @@ if [ "\$1" = app-server ]; then
 			*'"account/read"'*) echo "{\"id\":\$id,\"result\":{\"account\":{\"type\":\"chatgpt\"}}}" ;;
 			*'"account/rateLimits/read"'*)
 				read -r usado reinicia < "$TMP/uso-codex" 2>/dev/null
-				echo "{\"id\":\$id,\"result\":{\"rateLimits\":{\"primary\":{\"usedPercent\":\${usado:-null},\"resetsAt\":\${reinicia:-null}},\"secondary\":null}}}" ;;
+				echo "{\"id\":\$id,\"result\":{\"rateLimits\":{\"primary\":{\"windowDurationMins\":300,\"usedPercent\":\${usado:-null},\"resetsAt\":\${reinicia:-null}},\"secondary\":null}}}" ;;
 		esac
 	done
 	exit

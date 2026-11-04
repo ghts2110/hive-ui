@@ -304,17 +304,17 @@ function Sidebar() {
 	// 5 minutos. Sem ele no PATH, nem tenta.
 	const respostasCodex = conversas.filter(c => c.ia === 'codex' && c.status === 'pronto').map(c => `${c.id}:${c.desde}`).join(' ');
 	useEffect(() => {
-		let vale = true;
+		const leitura = new AbortController();
 		const buscar = () => {
 			const caminho = conv.caminhoCodex();
 			if (!caminho) return setCodex({});
 			setCodex(atual => ({...atual, instalado: true}));
-			plano.ler(caminho).then(lido => vale && setCodex({...lido, instalado: true}));
+			plano.ler(caminho, leitura.signal).then(lido => !leitura.signal.aborted && setCodex({...lido, instalado: true}));
 		};
 		buscar();
 		const intervalo = setInterval(buscar, 5 * 60 * 1000);
 		return () => {
-			vale = false;
+			leitura.abort();
 			clearInterval(intervalo);
 		};
 	}, [respostasCodex]);
