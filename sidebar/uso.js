@@ -1,7 +1,8 @@
 // Statusline do Claude Code (ver sidebar/hooks.json): o JSON que ela recebe
 // traz o uso do plano (rate_limits, só para assinantes Pro/Max, depois da
 // primeira resposta). A % da janela de 5h e quando ela reinicia vão para @uso,
-// que o sidebar desenha como um anel (ver sidebar/anel.js). Traz também as
+// junto com as da semanal, que o sidebar desenha como um anel (ver
+// sidebar/anel.js). Traz também as
 // linhas que esta conversa adicionou e removeu (cost), que vão para @linhas no
 // pane dela: o sidebar mostra cada conversa com as suas.
 // O --settings do hive-ui toma o lugar da statusline do usuário: se ele
@@ -27,9 +28,11 @@ try {
 // última resposta dela: só vale um dado mais novo, de uma janela de 5h
 // posterior ou, na mesma janela, com % maior (ela só sobe).
 const janela = dados.rate_limits?.five_hour;
+const semana = dados.rate_limits?.seven_day;
 if (Number.isFinite(janela?.used_percentage) && Number.isFinite(janela?.resets_at)) {
 	try {
-		const uso = `${janela.used_percentage} ${janela.resets_at}`;
+		let uso = `${janela.used_percentage} ${janela.resets_at}`;
+		if (Number.isFinite(semana?.used_percentage) && Number.isFinite(semana?.resets_at)) uso += ` ${semana.used_percentage} ${semana.resets_at}`;
 		const [usado, reinicia] = tmux('show', '-qv', '@uso').split(' ').map(Number);
 		const novo = !(reinicia >= janela.resets_at) || (reinicia === janela.resets_at && janela.used_percentage > usado);
 		if (novo) {

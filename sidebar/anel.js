@@ -40,10 +40,15 @@ export function anel(fracao) {
 	return saida;
 }
 
-// Uso guardado pela statusline (ver sidebar/uso.js) em @uso: "% reinício".
-// Sem o dado, ou com a janela de 5h já reiniciada, não se sabe o uso.
+// Uso guardado pela statusline (ver sidebar/uso.js) em @uso, ou lido do
+// Codex (ver sidebar/plano.js): "% reinício", a janela de 5h, e depois, se
+// houver, a semanal no mesmo formato. Sem o dado, ou com a janela de 5h já
+// reiniciada, não se sabe o uso; a semanal reiniciada só some.
 export function ler(valor, agora = Date.now() / 1000) {
-	const [usado, reinicia] = String(valor ?? '').split(' ').map(Number);
-	if (!Number.isFinite(usado) || !(reinicia > agora)) return;
-	return {usado: Math.min(100, Math.max(0, usado)), reinicia};
+	const [usado, reinicia, usadoSemana, reiniciaSemana] = String(valor ?? '').split(' ').map(Number);
+	const janela = (usado, reinicia) => Number.isFinite(usado) && reinicia > agora
+		? {usado: Math.min(100, Math.max(0, usado)), reinicia}
+		: undefined;
+	const uso = janela(usado, reinicia);
+	if (uso) return {...uso, semana: janela(usadoSemana, reiniciaSemana)};
 }
