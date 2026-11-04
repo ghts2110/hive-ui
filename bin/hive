@@ -4,13 +4,6 @@
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd -P)
 
-# O primeiro argumento pode escolher a IA da conversa (hoje só o Claude Code,
-# o padrão); fica o espaço para `hive codex` e outras. Qualquer outro primeiro
-# argumento ainda vai para o Claude Code, como prompt ou opção.
-case $1 in
-	claude) shift ;;
-esac
-
 # Binário original, nunca a função antiga `claude()` do ~/.zshrc, que chama
 # este launcher: só um caminho serve, senão seria uma função exportada (bash
 # com `export -f`) e o exec entraria em recursão.

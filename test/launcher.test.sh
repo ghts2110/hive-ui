@@ -115,17 +115,6 @@ PATH="$FAKE:$PATH" TMUX= HIVE= script -q /dev/null "$ROOT/bin/hive" mcp list </d
 [ "$(cat "$TMP/args" | tr '\n' ' ')" = "mcp list " ] && ! servidor_vivo \
 	&& ok "subcomando roda o claude puro" || falha "subcomando roda o claude puro"
 
-# `hive claude` escolhe o Claude Code, que é o padrão: o nome não chega a ele.
-: > "$TMP/args"
-PATH="$FAKE:$PATH" HIVE=1 "$ROOT/bin/hive" claude -v
-[ "$(cat "$TMP/args")" = "-v" ] \
-	&& ok "hive claude escolhe o Claude Code" || falha "hive claude escolhe o Claude Code"
-: > "$TMP/args"
-PATH="$FAKE:$PATH" TMUX= HIVE= script -q /dev/null "$ROOT/bin/hive" claude mcp list </dev/null >/dev/null 2>&1
-[ "$(cat "$TMP/args" | tr '\n' ' ')" = "mcp list " ] && ! servidor_vivo \
-	&& ok "hive claude com subcomando roda o claude puro" \
-	|| falha "hive claude com subcomando roda o claude puro"
-
 # A função antiga `claude()` do ~/.zshrc continua abrindo o launcher sem recursão.
 : > "$TMP/args"
 PATH="$FAKE:$PATH" HIVE=1 HIVE_BIN="$ROOT/bin/hive" zsh -fc 'claude() { "$HIVE_BIN" "$@"; }; claude -v'
