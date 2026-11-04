@@ -123,6 +123,8 @@ function Instrucoes({linhas}) {
 	);
 }
 
+const comoInstalarCodex = ['Codex não encontrado.', 'Instale com npm i -g @openai/codex, faça login com codex login e aperte c de novo.'];
+
 const atalhos = [
 	['ctrl+\\', 'alternar'],
 	['↑↓ j k', 'escolher'],
@@ -132,6 +134,7 @@ const atalhos = [
 	['tab', 'anterior'],
 	['p', 'pendente'],
 	['n ctrl+t', 'nova'],
+	['c', 'nova do Codex'],
 	['x ctrl+w', 'fechar'],
 	['h', 'esconder'],
 	['< >', 'largura'],
@@ -194,6 +197,9 @@ function Sidebar() {
 	// lista (semMic); quando para sozinho ou falha, um aviso no rodapé.
 	const [mic, setMic] = useState({fase: 'desligado'});
 	const [semMic, setSemMic] = useState(null);
+	// Conversa do Codex pedida sem ele instalado: como instalar, no lugar
+	// da lista.
+	const [semCodex, setSemCodex] = useState(false);
 	const [avisoMic, setAvisoMic] = useState(null);
 	const ditando = useRef(null);
 	ditando.current ??= new ditado.Ditado(naTela, novo => {
@@ -201,7 +207,7 @@ function Sidebar() {
 		if (ditado.comoResolver[novo.aviso]) setSemMic(novo.aviso);
 		else if (novo.aviso) setAvisoMic(novo.aviso);
 	});
-	const painel = semVoz || semMic;
+	const painel = semVoz || semMic || semCodex;
 	const atualizar = () => {
 		try {
 			setEstado(ler());
@@ -395,6 +401,7 @@ function Sidebar() {
 		setAjuda(false);
 		setSemVoz(false);
 		setSemMic(null);
+		setSemCodex(false);
 		setSobreAnel(false);
 		if (focado) {
 			setCursor(null);
@@ -497,6 +504,15 @@ function Sidebar() {
 			return;
 		}
 
+		if (semCodex) {
+			if (input === 'q' || key.escape) setSemCodex(false);
+			else if (input === 'c' && conv.temCodex()) {
+				setSemCodex(false);
+				agir(() => setCursor(conv.nova(sidebar, 'codex')));
+			}
+			return;
+		}
+
 		if (confirmar) {
 			setConfirmar(null);
 			if (input === 's' && alvo) {
@@ -525,6 +541,9 @@ function Sidebar() {
 		}
 		else if (input === 'n') {
 			agir(() => setCursor(conv.nova(sidebar)));
+		} else if (input === 'c') {
+			if (conv.temCodex()) agir(() => setCursor(conv.nova(sidebar, 'codex')));
+			else setSemCodex(true);
 		} else if (input === 'x' && sob) setConfirmar(sob.id);
 		else if (input === 'h') agir(() => conv.esconder(sidebar));
 		else if (input === '<' || input === '>') {
@@ -603,7 +622,7 @@ function Sidebar() {
 		h(
 			Box,
 			{justifyContent: 'space-between', flexShrink: 0},
-			h(Box, {flexShrink: 1, overflow: 'hidden'}, h(Text, {bold: true, color: focado ? destaque : undefined, wrap: 'truncate-end'}, ajuda ? 'Atalhos' : semVoz ? 'Leitura em voz alta' : semMic ? 'Ditado por voz' : 'Conversas')),
+			h(Box, {flexShrink: 1, overflow: 'hidden'}, h(Text, {bold: true, color: focado ? destaque : undefined, wrap: 'truncate-end'}, ajuda ? 'Atalhos' : semVoz ? 'Leitura em voz alta' : semMic ? 'Ditado por voz' : semCodex ? 'Codex' : 'Conversas')),
 			ajuda || painel ? null : contagem,
 		),
 		h(Box, {height: 1, flexShrink: 0}, !ajuda && !painel && inicio ? seta(1, `↑ ${inicio} acima`) : null),
@@ -616,6 +635,8 @@ function Sidebar() {
 				? h(Instrucoes, {linhas: voz.comoInstalar})
 				: semMic
 				? h(Instrucoes, {linhas: ditado.comoResolver[semMic]})
+				: semCodex
+				? h(Instrucoes, {linhas: comoInstalarCodex})
 				: [
 					...visiveis.map(c =>
 						h(Conversa, {key: c.id, conversa: c, sobCursor: focado && c === sob, quadro, largura: colunas - 2}),

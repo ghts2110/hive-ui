@@ -1,19 +1,47 @@
 #!/bin/sh
-# Uma conversa: roda o claude no pane atual. Quando ele sai, outra conversa
-# assume a área principal; se era a última, a interface fecha.
+# Uma conversa: roda a IA dela (HIVE_IA: claude, o padrão, ou codex) no pane
+# atual. Quando ela sai, outra conversa assume a área principal; se era a
+# última, a interface fecha.
 
 n=$(tmux show -qv @proxima)
 n=${n:-1}
 tmux set -q @proxima $((n + 1))
 tmux set -p -t "$TMUX_PANE" @conversa "$n"
+ia=${HIVE_IA:-claude}
+# No Codex, começa sem título (antes de marcar a IA, para o sidebar não tomar
+# o título padrão do pane pelo nome da conversa): o que ele escrever nele é
+# o nome dela.
+[ "$ia" = codex ] && printf '\033]2;\033\\'
+tmux set -p -t "$TMUX_PANE" @ia "$ia"
 
-# Hooks marcam título e status da conversa para o sidebar.
-"$HIVE_CLAUDE" --settings "$HIVE_ROOT/sidebar/hooks.json" "$@"
-status=$?
+# Hooks marcam título e status da conversa para o sidebar. No Codex, vão por
+# -c (ver sidebar/codex.js), um por linha; o título do terminal fica só com o
+# nome que ele dá à conversa (ver topico em sidebar/conversas.js), e o
+# --no-daemon o mantém neste processo, com o ambiente deste pane (TMUX_PANE)
+# para os hooks.
+if [ "$ia" = codex ]; then
+	while IFS= read -r opcao; do
+		set -- "$@" -c "$opcao"
+	done <<-OPCOES
+	$("$HIVE_NODE" "$HIVE_ROOT/sidebar/codex.js")
+	OPCOES
+	codex=$(command -v codex)
+	case $codex in /*) ;; *) codex= ;; esac
+	if [ -z "$codex" ]; then
+		echo "Codex não encontrado no PATH." >&2
+		status=127
+	else
+		"$codex" --no-daemon -c 'tui.terminal_title=["thread-name"]' "$@"
+		status=$?
+	fi
+else
+	"$HIVE_CLAUDE" --settings "$HIVE_ROOT/sidebar/hooks.json" "$@"
+	status=$?
+fi
 
-# Erro ao abrir o claude: deixa a mensagem na tela antes de fechar.
+# Erro ao abrir a IA: deixa a mensagem na tela antes de fechar.
 if [ $status -ne 0 ]; then
-	printf '\nclaude saiu com status %s. Pressione Enter para fechar.' "$status"
+	printf '\n%s saiu com status %s. Pressione Enter para fechar.' "$ia" "$status"
 	read -r _
 fi
 

@@ -1,10 +1,10 @@
 // Leitura em voz alta (alto-falante no rodapé do sidebar): fala o texto que
-// o claude da conversa na tela acabou de escrever, offline e sem custo, com a
+// a IA da conversa na tela acabou de escrever, offline e sem custo, com a
 // voz natural (Piper, ver sidebar/fala.js) ou, enquanto ela não está baixada,
 // com a voz pt-br do sistema (`say` no macOS, `espeak-ng` no Linux).
-// O texto vem do transcript da conversa (o .jsonl que o Claude Code grava,
-// um bloco por linha assim que ele fica pronto); o caminho chega pelos hooks
-// em @transcript (ver sidebar/status.js). Só o que aparece depois de ligar é
+// O texto vem do transcript da conversa (o .jsonl que o Claude Code ou o
+// Codex grava, um bloco por linha assim que ele fica pronto); o caminho chega
+// pelos hooks em @transcript (ver sidebar/status.js). Só o que aparece depois de ligar é
 // lido: ao ligar ou trocar de conversa, a leitura começa do fim do arquivo.
 import {execFile, spawn} from 'node:child_process';
 import {closeSync, existsSync, openSync, readSync, statSync} from 'node:fs';
@@ -160,6 +160,15 @@ export class Leitor {
 			try {
 				item = JSON.parse(linha);
 			} catch {
+				continue;
+			}
+			// No Codex, o texto dele vem nas mensagens do assistente que
+			// entram no histórico (response_item).
+			const {payload} = item;
+			if (item.type === 'response_item' && payload?.type === 'message' && payload.role === 'assistant') {
+				for (const bloco of payload.content ?? []) {
+					if (bloco.type === 'output_text') textos.push(limpar(bloco.text));
+				}
 				continue;
 			}
 			// Subagentes e as mensagens que o próprio Claude Code inventa
