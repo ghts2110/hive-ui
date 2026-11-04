@@ -29,6 +29,7 @@ Interface para o [Claude Code](https://claude.com/claude-code) no terminal: o Cl
 - [tmux](https://github.com/tmux/tmux) 3.x
 - [Node](https://nodejs.org) 20+
 - [Claude Code](https://claude.com/claude-code) instalado e logado
+- Opcional, só para as [conversas do Codex](#conversas-do-codex): o [Codex](https://github.com/openai/codex) instalado e logado (`npm i -g @openai/codex` e `codex login`)
 - Opcional, só para o [ditado por voz](#ditado-por-voz): um gravador de áudio. No macOS, o [ffmpeg](https://ffmpeg.org) ou o `sox`; no Linux, o `parec` (pulseaudio-utils), o `pw-record` (pipewire), o `arecord` (alsa-utils), o `ffmpeg` ou o `sox`.
 - Só no Linux, para baixar a voz e o modelo do ditado: `bzip2`.
 
@@ -87,7 +88,7 @@ No Linux, extrair os modelos precisa do `bzip2`. Os modelos rodam em macOS e Lin
 
 ![Interface recém-aberta: sidebar com uma conversa nova e o Claude Code ao lado](docs/inicio.png)
 
-- **Criar:** `Ctrl-T`, de qualquer lugar, abre uma conversa nova e a traz para a tela.
+- **Criar:** `Ctrl-T`, de qualquer lugar, abre uma conversa nova e a traz para a tela. Com o sidebar focado, `c` abre uma do [Codex](#conversas-do-codex).
 - **Alternar:** `Ctrl-\` leva o foco ao sidebar; escolha com `↑`/`↓` e `Enter` (ou clique). As que não estão na tela continuam rodando.
 - **Fechar:** `Ctrl-W` fecha a conversa da tela (confirma com `s`) e põe a vizinha no lugar; na última, abre uma nova. `/exit` também fecha a conversa e, na última, encerra a interface.
 - **Ditar e ouvir:** `Ctrl-Q` liga o microfone; o alto-falante no rodapé do sidebar liga a leitura em voz alta.
@@ -96,6 +97,14 @@ No Linux, extrair os modelos precisa do `bzip2`. Os modelos rodam em macOS e Lin
 Fechar o terminal encerra tudo: as conversas, o sidebar e o tmux por trás deles.
 
 ## Funcionalidades
+
+### Conversas do Codex
+
+![Conversa do Codex esperando permissão para um comando, com o ? azul no sidebar](docs/codex.png)
+
+Com o sidebar focado, `c` abre uma conversa nova com o [Codex](https://github.com/openai/codex) no lugar do Claude Code. Ela fica na lista junto das outras e tem o mesmo comportamento: troca sem perder estado, status, título, aviso com som e no Dock, ditado e leitura em voz alta. O título é o nome que o Codex dá à conversa ou, até ele dar um, a sua primeira mensagem. Cabeçalho fixo, uso do plano e linhas mudadas são do Claude Code e não aparecem nela.
+
+O status vem dos hooks do Codex, passados só para essa conversa: nada é gravado no `~/.codex`. Sem o Codex instalado, o `c` mostra como instalar. `codex` digitado no terminal continua abrindo o Codex puro.
 
 ### Status de cada conversa
 
@@ -175,6 +184,7 @@ No macOS, enquanto a interface estiver aberta, o Mac não entra em repouso e a t
 | `Tab` | sidebar | volta para a conversa anterior |
 | `p` | sidebar | próxima pendente: a que passou a esperar por você ou terminou sem ser vista, depois as que continuam esperando |
 | `n` / `x` | sidebar | conversa nova / fecha a selecionada (pede confirmação) |
+| `c` | sidebar | conversa nova do Codex |
 | `h` | sidebar | esconde o sidebar |
 | `<` / `>` | sidebar | estreita / alarga o sidebar (ou arraste a borda) |
 | `v`, clique no alto-falante | sidebar | liga / desliga a leitura em voz alta |
@@ -237,7 +247,7 @@ Não sobra mais nada: fora esses modelos, o projeto não salva arquivos fora do 
 
 - **tmux** cuida do layout e mantém cada conversa viva em seu próprio pane; trocar de conversa troca qual pane ocupa a área principal. Cada terminal tem seu próprio servidor tmux, com a config do repo (`tmux.conf`); o `~/.tmux.conf` não é lido.
 - **Node + [Ink](https://github.com/vadimdemedes/ink)** desenha o sidebar, que conversa com o tmux pela linha de comando.
-- **Hooks e statusline do Claude Code** avisam o sidebar quando uma conversa muda de status, ganha título ou edita arquivos, e trazem o uso do plano.
+- **Hooks e statusline do Claude Code** avisam o sidebar quando uma conversa muda de status, ganha título ou edita arquivos, e trazem o uso do plano. Nas conversas do Codex, os hooks dele fazem o mesmo papel no status.
 - **[sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)** roda a voz da leitura e o reconhecimento do ditado localmente.
 - O `hive` é um link, criado pelo `npm link`, para o launcher do projeto (`bin/hive`), que abre o tmux e chama o binário `claude` do PATH; o `claude` em si não é interceptado.
 
