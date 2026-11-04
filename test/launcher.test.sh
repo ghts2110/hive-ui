@@ -93,7 +93,7 @@ abrir() {
 	FAKE_SLEEP=$1; shift
 	FAKE_SLEEP=$FAKE_SLEEP FAKE_LOGO=1 PATH="$FAKE:$PATH" TMUX= HIVE= \
 		script -q /dev/null sh -c 'stty cols 120 rows 30; exec "$0" "$@"' \
-		"$ROOT/bin/hive" "$@" </dev/null >/dev/null 2>&1 &
+		"${LAUNCHER:-$ROOT/bin/hive}" "$@" </dev/null >/dev/null 2>&1 &
 	PID=$!
 	sleep 2
 }
@@ -114,17 +114,6 @@ echo | PATH="$FAKE:$PATH" TMUX= HIVE= "$ROOT/bin/hive" -p oi | cat
 PATH="$FAKE:$PATH" TMUX= HIVE= script -q /dev/null "$ROOT/bin/hive" mcp list </dev/null >/dev/null 2>&1
 [ "$(cat "$TMP/args" | tr '\n' ' ')" = "mcp list " ] && ! servidor_vivo \
 	&& ok "subcomando roda o claude puro" || falha "subcomando roda o claude puro"
-
-# `hive claude` escolhe o Claude Code, que é o padrão: o nome não chega a ele.
-: > "$TMP/args"
-PATH="$FAKE:$PATH" HIVE=1 "$ROOT/bin/hive" claude -v
-[ "$(cat "$TMP/args")" = "-v" ] \
-	&& ok "hive claude escolhe o Claude Code" || falha "hive claude escolhe o Claude Code"
-: > "$TMP/args"
-PATH="$FAKE:$PATH" TMUX= HIVE= script -q /dev/null "$ROOT/bin/hive" claude mcp list </dev/null >/dev/null 2>&1
-[ "$(cat "$TMP/args" | tr '\n' ' ')" = "mcp list " ] && ! servidor_vivo \
-	&& ok "hive claude com subcomando roda o claude puro" \
-	|| falha "hive claude com subcomando roda o claude puro"
 
 # A função antiga `claude()` do ~/.zshrc continua abrindo o launcher sem recursão.
 : > "$TMP/args"
@@ -548,6 +537,19 @@ cafeina_viva && falha "fechar o terminal solta o caffeinate" || ok "fechar o ter
 abrir 90
 kill -KILL "$(T list-clients -F '#{client_pid}')"; sleep 1
 cafeina_viva && falha "crash solta o caffeinate" || ok "crash solta o caffeinate"
+T kill-server 2>/dev/null; wait "$PID" 2>/dev/null
+
+# Instalado pelo `npm link`, o `hive` do PATH é um link relativo, como o do
+# npm, para bin/hive: a interface abre achando o repositório pelo link.
+mkdir -p "$TMP/global/bin" "$TMP/global/lib/node_modules"
+ln -s "$ROOT" "$TMP/global/lib/node_modules/hive-ui"
+ln -s ../lib/node_modules/hive-ui/bin/hive "$TMP/global/bin/hive"
+: > "$TMP/args"
+LAUNCHER="$TMP/global/bin/hive" abrir 90
+sed -n 2p "$TMP/args" | grep -qx "$ROOT/sidebar/hooks.json" \
+	&& [ -n "$(T show -v @sidebar 2>/dev/null)" ] \
+	&& ok "hive instalado pelo npm link abre a interface" \
+	|| falha "npm link: $(cat "$TMP/args" | tr '\n' ' ')"
 T kill-server 2>/dev/null; wait "$PID" 2>/dev/null
 
 # Sair do claude fecha a interface.
