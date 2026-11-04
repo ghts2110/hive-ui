@@ -43,15 +43,29 @@ FAKE
 chmod +x "$FAKE/claude"
 
 # codex falso: grava argumentos, a IA pedida e o título inicial do terminal,
-# depois espera.
+# depois espera. Como app-server, responde o login e o uso do plano que
+# estiverem em $TMP/uso-codex ("% reinício"), como o sidebar/plano.js pede.
 cat > "$FAKE/codex" <<FAKE
 #!/bin/sh
+if [ "\$1" = app-server ]; then
+	while read -r linha; do
+		id=\$(printf '%s' "\$linha" | sed -n 's/^{"id":\([0-9]*\).*/\1/p')
+		case \$linha in
+			*'"account/read"'*) echo "{\"id\":\$id,\"result\":{\"account\":{\"type\":\"chatgpt\"}}}" ;;
+			*'"account/rateLimits/read"'*)
+				read -r usado reinicia < "$TMP/uso-codex" 2>/dev/null
+				echo "{\"id\":\$id,\"result\":{\"rateLimits\":{\"primary\":{\"usedPercent\":\${usado:-null},\"resetsAt\":\${reinicia:-null}},\"secondary\":null}}}" ;;
+		esac
+	done
+	exit
+fi
 printf '%s\n' "\$@" > "$TMP/codex-args"
 echo "HIVE_IA=\$HIVE_IA" > "$TMP/codex-env"
 trap 'exit 0' TERM
 while :; do sleep 1; done
 FAKE
 chmod +x "$FAKE/codex"
+echo "17 $(($(date +%s) + 7200))" > "$TMP/uso-codex"
 
 # caffeinate falso: grava argumentos e espera o processo do -w sair. Ignora
 # SIGHUP: no teste o cliente do tmux lidera o pty e a morte dele mandaria HUP
@@ -358,14 +372,15 @@ tecla 2
 [ "$(na_tela)" = "$(conversas | cut -d' ' -f2)" ] && ok "2 abre a segunda conversa" || falha "2: $(na_tela)"
 
 # Anel do uso do plano: a statusline guarda a % da janela de 5h em @uso e
-# repassa a statusline do usuário; o anel fica acima do rodapé (linhas 24-26
-# num pane de 30) e mostra a % com o mouse em cima ou depois de um clique.
-anel() { T capture-pane -p -t "$sb" | sed -n 24,26p; }
-anel | grep -q "indisponível" && falha "anel mostra a % sem o mouse" \
+# repassa a statusline do usuário; com o Codex instalado, o anel do Claude
+# fica em cima do dele, acima do rodapé (linhas 21-23 e 24-26 num pane de
+# 30), e cada um mostra a % com o mouse em cima ou depois de um clique.
+anel() { T capture-pane -p -t "$sb" | sed -n 21,23p; }
+anel | grep -q "sem dado" && falha "anel mostra a % sem o mouse" \
 	|| ok "anel não mostra a % sem o mouse"
-passar() { T send-keys -t "$sb" -l "$(printf '\033[<35;4;25M')"; sleep 1; }
+passar() { T send-keys -t "$sb" -l "$(printf '\033[<35;4;22M')"; sleep 1; }
 passar
-anel | grep -q "indisponível" && ok "sem dado de uso, o anel diz indisponível" || falha "sem uso: $(anel)"
+anel | grep -q "sem dado" && ok "sem dado de uso, o anel diz sem dado" || falha "sem uso: $(anel)"
 statusline() {
 	printf '%s' "$1" > "$TMP/statusline"
 	T run-shell "HOME='$TMP' '$(command -v node)' '$ROOT/sidebar/uso.js' < '$TMP/statusline'"
@@ -377,11 +392,11 @@ reinicia=$(($(date +%s) + 3600))
 limite() { printf '{"cwd":"%s","rate_limits":{"five_hour":{"used_percentage":%s,"resets_at":%s}}}' "$TMP" "$1" "$2"; }
 saida=$(statusline "$(limite 42.4 "$reinicia")")
 [ "$saida" = "minha statusline" ] && ok "statusline do usuário continua aparecendo" || falha "statusline: $saida"
-passar; anel | grep -q "42% usado" && ok "statusline guarda o uso e o anel mostra a %" || falha "uso: $(anel)"
+passar; anel | grep -q "42% 5h" && ok "statusline guarda o uso e o anel mostra a %" || falha "uso: $(anel)"
 statusline "{\"cwd\":\"$TMP\"}" >/dev/null
-passar; anel | grep -q "42% usado" && ok "conversa sem dado não apaga o uso" || falha "uso apagado: $(anel)"
+passar; anel | grep -q "42% 5h" && ok "conversa sem dado não apaga o uso" || falha "uso apagado: $(anel)"
 statusline "$(limite 30 "$reinicia")" >/dev/null
-passar; anel | grep -q "42% usado" && ok "conversa parada não volta o uso para trás" || falha "uso antigo: $(anel)"
+passar; anel | grep -q "42% 5h" && ok "conversa parada não volta o uso para trás" || falha "uso antigo: $(anel)"
 # Linhas mudadas: por conversa, vindas da statusline de cada uma.
 linhas() { printf '{"cwd":"%s","cost":{"total_lines_added":%s,"total_lines_removed":%s}}' "$TMP" "$2" "$3" > "$TMP/statusline"
 	T run-shell "TMUX_PANE=$1 HOME='$TMP' '$(command -v node)' '$ROOT/sidebar/uso.js' < '$TMP/statusline'" >/dev/null; sleep 1.5; }
@@ -403,12 +418,18 @@ hook "$pane" pronto '{"prompt":"Depois"}'; sleep 1
 diff_de Depois | grep -q "hive-ui" && ! diff_de Depois | grep -q "+" && ok "/clear zera o contador" || falha "clear: $(diff_de Depois)"
 linhas "$pane" 9 4
 diff_de Depois | grep -q "+4 -2" && ok "depois do /clear conta só o que veio depois" || falha "após clear: $(diff_de Depois)"
-T send-keys -t "$sb" -l "$(printf '\033[<35;12;25M')"; sleep 1
+T send-keys -t "$sb" -l "$(printf '\033[<35;12;22M')"; sleep 1
 anel | grep -q "%" && falha "% continua fora do anel" || ok "% some quando o mouse sai do anel"
-T send-keys -t "$sb" -l "$(printf '\033[<0;4;25M')"; sleep 1
-anel | grep -q "42% usado" && ok "clique no anel fixa a %" || falha "clique no anel: $(anel)"
+T send-keys -t "$sb" -l "$(printf '\033[<0;4;22M')"; sleep 1
+anel | grep -q "42% 5h" && ok "clique no anel fixa a %" || falha "clique no anel: $(anel)"
 T set -q @uso "42 $(($(date +%s) - 1))"; sleep 1.5
-anel | grep -q "indisponível" && ok "janela de 5h reiniciada vira indisponível" || falha "reiniciada: $(anel)"
+anel | grep -q "sem dado" && ok "janela de 5h reiniciada vira sem dado" || falha "reiniciada: $(anel)"
+T send-keys -t "$sb" -l "$(printf '\033[<0;4;22M')"; sleep 1
+# O do Codex, embaixo, com o uso que o app-server dele responde.
+anel_codex() { T capture-pane -p -t "$sb" | sed -n 24,26p; }
+T send-keys -t "$sb" -l "$(printf '\033[<35;4;25M')"; sleep 1
+anel_codex | grep -q "17% 5h" && ! anel | grep -q "%" && ok "anel do codex embaixo mostra o uso dele" \
+	|| falha "anel do codex: $(anel) / $(anel_codex)"
 
 # Leitura em voz alta: o alto-falante fica no canto de baixo do rodapé
 # (linha 29, nas 3 colunas antes da margem) e começa desligado.
@@ -603,6 +624,9 @@ sb=$(T show -v @sidebar)
 tecla c
 T capture-pane -p -t "$sb" | grep -q "Codex não encontrado" && [ "$(conversas)" = "1 " ] \
 	&& ok "sem codex, c diz como instalar" || falha "sem codex: $(T capture-pane -p -t "$sb")"
+tecla Escape
+T capture-pane -p -t "$sb" | sed -n 21,23p | grep -q "⣿" && falha "sem codex, anel dele aparece" \
+	|| { T capture-pane -p -t "$sb" | sed -n 24,26p | grep -q "⣿" && ok "sem codex, só o anel do claude" || falha "sem anel: $(T capture-pane -p -t "$sb")"; }
 T kill-server 2>/dev/null; wait "$PID" 2>/dev/null
 
 # Instalado pelo `npm link`, o `hive` do PATH é um link relativo, como o do

@@ -74,45 +74,41 @@ function Conversa({conversa, sobCursor, quadro, largura}) {
 	);
 }
 
-// Uso do plano de cada IA (ver sidebar/anel.js), um anel para cada, lado a
-// lado: o do Claude em laranja, o do Codex em azul, a parte usada na cor e o
-// resto apagado; sem o dado, todo apagado. O do Codex só aparece com ele
-// instalado e logado. A % e o reinício da janela de 5h, e a % e o dia da
-// semanal, só aparecem ao lado com o mouse em cima de um deles ou depois de
-// um clique.
+// Uso do plano de cada IA instalada (ver sidebar/anel.js), um anel para
+// cada, um em cima do outro: o do Claude em laranja, o do Codex em azul
+// embaixo, a parte usada na cor e o resto apagado; sem o dado (ainda sem
+// resposta, sem login ou logado por API), todo apagado. A % e o reinício da
+// janela de 5h, e a % e o dia da semanal, só aparecem ao lado de um deles
+// com o mouse em cima ou depois de um clique.
 const ias = {claude: {nome: 'Claude', cor: laranja}, codex: {nome: 'Codex', cor: azul}};
 
-function Anel({uso, cor}) {
-	return h(
-		Box,
-		{flexDirection: 'column', flexShrink: 0, marginRight: 1},
-		anel.anel((uso?.usado ?? 0) / 100).map((trechos, l) =>
-			h(Text, {key: l}, trechos.map(({texto, cheio}, j) => h(Text, {key: j, color: cheio ? cor : apagado, dimColor: !cheio}, texto))),
-		),
-	);
-}
-
-function Planos({usos, detalhe, largura}) {
+function Anel({ia, uso, detalhe, largura}) {
+	const {nome, cor} = ias[ia];
 	const data = segundos => new Date(segundos * 1000);
 	const hora = segundos => `${String(data(segundos).getHours()).padStart(2, '0')}:${String(data(segundos).getMinutes()).padStart(2, '0')}`;
 	const dia = segundos => ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][data(segundos).getDay()];
 	const linha = (key, texto, props) => h(Text, {key, color: apagado, wrap: 'truncate-end', ...props}, texto);
-	const uso = usos[detalhe];
-	// O dia em que a semanal reinicia só entra se couber ao lado dos anéis.
+	// O dia em que a semanal reinicia só entra se couber ao lado do anel.
 	const semana = uso?.semana && `${Math.round(uso.semana.usado)}% 7d`;
 	const comDia = semana && `${semana} ↻ ${dia(uso.semana.reinicia)}`;
-	const sobra = largura - Object.keys(usos).length * (anel.colunas + 1);
-	const texto = !detalhe || !(detalhe in usos) ? [] : uso
+	const sobra = largura - anel.colunas - 1;
+	const texto = !detalhe ? [] : uso
 		? [
-			linha(1, `${Math.round(uso.usado)}% 5h`, {bold: true, color: ias[detalhe].cor}),
+			linha(1, `${Math.round(uso.usado)}% 5h`, {bold: true, color: cor}),
 			linha(2, `↻ ${hora(uso.reinicia)}`),
 			semana ? linha(3, comDia.length <= sobra ? comDia : semana) : null,
 		]
-		: [linha(1, ias[detalhe].nome), linha(2, 'sem dado'), linha(3, 'de uso')];
+		: [linha(1, nome), linha(2, 'sem dado'), linha(3, 'de uso')];
 	return h(
 		Box,
 		{height: anel.linhas, flexShrink: 0},
-		Object.entries(usos).map(([ia, uso]) => h(Anel, {key: ia, uso, cor: ias[ia].cor})),
+		h(
+			Box,
+			{flexDirection: 'column', flexShrink: 0, marginRight: 1},
+			anel.anel((uso?.usado ?? 0) / 100).map((trechos, l) =>
+				h(Text, {key: l}, trechos.map(({texto, cheio}, j) => h(Text, {key: j, color: cheio ? cor : apagado, dimColor: !cheio}, texto))),
+			),
+		),
 		h(Box, {flexDirection: 'column', flexShrink: 1, overflow: 'hidden'}, texto),
 	);
 }
@@ -163,10 +159,12 @@ const atalhos = [
 	['esc', 'voltar'],
 ];
 
+// Sem encolher: o que não couber é cortado embaixo, em vez de as linhas se
+// sobreporem.
 function Ajuda() {
 	return h(
 		Box,
-		{flexDirection: 'column'},
+		{flexDirection: 'column', flexShrink: 0},
 		atalhos.map(([tecla, acao]) =>
 			h(Text, {key: tecla, wrap: 'truncate-end'}, h(Text, {color: destaque}, tecla.padEnd(9)), acao),
 		),
@@ -201,7 +199,8 @@ function Sidebar() {
 	// fixada por um clique.
 	const [sobreAnel, setSobreAnel] = useState(null);
 	const [anelFixo, setAnelFixo] = useState(null);
-	// Login e uso do plano do Codex (ver sidebar/plano.js).
+	// Se o Codex está instalado, e o login e o uso do plano dele (ver
+	// sidebar/plano.js).
 	const [codex, setCodex] = useState({});
 	// Conta os movimentos do mouse, para o prazo da % recomeçar a cada um.
 	const [quadroMouse, setQuadroMouse] = useState(0);
@@ -309,7 +308,8 @@ function Sidebar() {
 		const buscar = () => {
 			const caminho = conv.caminhoCodex();
 			if (!caminho) return setCodex({});
-			plano.ler(caminho).then(lido => vale && setCodex(lido));
+			setCodex(atual => ({...atual, instalado: true}));
+			plano.ler(caminho).then(lido => vale && setCodex({...lido, instalado: true}));
 		};
 		buscar();
 		const intervalo = setInterval(buscar, 5 * 60 * 1000);
@@ -319,7 +319,7 @@ function Sidebar() {
 		};
 	}, [respostasCodex]);
 	const usos = {claude: anel.ler(estado.uso)};
-	if (codex.conta) usos.codex = anel.ler(codex.uso);
+	if (codex.instalado) usos.codex = anel.ler(codex.uso);
 
 	// O spinner só anda enquanto alguma conversa trabalha.
 	const trabalhando = conversas.some(c => c.status === 'trabalhando');
@@ -480,9 +480,9 @@ function Sidebar() {
 	const abrir = id => agir(() => conv.abrir(sidebar, id));
 
 	// Só cabem algumas conversas: mostra a fatia em volta do cursor. Fora o
-	// título, o anel e o rodapé, sobram linhas para elas, menos uma para o
+	// título, os anéis e o rodapé, sobram linhas para elas, menos uma para o
 	// "↓ mais" quando não cabem todas (o "↑ acima" usa a linha abaixo do título).
-	const fixas = 6 + anel.linhas;
+	const fixas = 6 + Object.keys(usos).length * anel.linhas;
 	let cabem = Math.max(1, Math.floor((linhas - fixas) / 3));
 	if (conversas.length > cabem) cabem = Math.max(1, Math.floor((linhas - fixas - 1) / 3));
 	const inicio = Math.min(Math.max(0, i - Math.floor(cabem / 2)), Math.max(0, conversas.length - cabem));
@@ -494,15 +494,14 @@ function Sidebar() {
 	const noAltoFalante = (linha, coluna) => linha === linhas - 1 && coluna >= colunas - 3;
 	const noMicrofone = (linha, coluna) => linha === linhas - 2 && coluna >= colunas - 3;
 	// Clique (botão 0) abre a conversa; a rodinha (64/65) move o cursor. Os
-	// botões começam na linha 3 e têm 3 linhas cada. O anel fica logo acima
-	// das 3 linhas do rodapé, depois da margem de uma coluna, e cada um tem
-	// uma coluna de espaço depois dele; passar o mouse (35, movimento sem
-	// botão) mostra a % daquele, e o clique a fixa ou solta.
-	const topoAnel = linhas - 3 - anel.linhas;
+	// botões começam na linha 3 e têm 3 linhas cada. Os anéis ficam logo
+	// acima das 3 linhas do rodapé, um em cima do outro, depois da margem de
+	// uma coluna; passar o mouse (35, movimento sem botão) mostra a % daquele,
+	// e o clique a fixa ou solta.
+	const topoAnel = linhas - 3 - Object.keys(usos).length * anel.linhas;
 	const noAnel = (linha, coluna) => {
-		if (linha < topoAnel || linha >= topoAnel + anel.linhas || coluna < 2) return null;
-		const ia = Object.keys(usos)[Math.floor((coluna - 2) / (anel.colunas + 1))];
-		return ia && (coluna - 2) % (anel.colunas + 1) < anel.colunas ? ia : null;
+		if (linha < topoAnel || coluna < 2 || coluna >= 2 + anel.colunas) return null;
+		return Object.keys(usos)[Math.floor((linha - topoAnel) / anel.linhas)] ?? null;
 	};
 	function mouse(botao, linha, coluna) {
 		// Movimento com shift, alt ou ctrl soma 4, 8 ou 16 ao botão.
@@ -694,7 +693,7 @@ function Sidebar() {
 					abaixo ? seta('abaixo', `↓ ${abaixo} abaixo`) : null,
 				],
 		),
-		h(Planos, {usos, detalhe: sobreAnel || anelFixo, largura: colunas - 2}),
+		Object.entries(usos).map(([ia, uso]) => h(Anel, {key: ia, ia, uso, detalhe: (sobreAnel || anelFixo) === ia, largura: colunas - 2})),
 		// O rodapé tem 3 linhas, as dicas embaixo; o microfone divide a
 		// penúltima com elas e o alto-falante, a última.
 		h(
