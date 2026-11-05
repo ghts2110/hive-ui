@@ -32,6 +32,7 @@ export function ler(sidebar) {
 			pasta,
 			transcript,
 			mudancas: mudancas(linhas),
+			ia: ia || 'claude',
 		}))
 		.sort((a, b) => a.n - b.n);
 	// Junto, o uso do plano que a statusline guardou (ver sidebar/uso.js) e
@@ -60,13 +61,13 @@ export function topico(titulo, ia) {
 }
 
 // A IA da conversa (ver bin/conversa): claude, o padrão, ou codex.
-export const temCodex = () => {
+export const caminhoCodex = () => {
 	try {
-		return execFileSync('sh', ['-c', 'command -v codex'], {encoding: 'utf8', stdio: 'pipe'}).startsWith('/');
-	} catch {
-		return false;
-	}
+		const caminho = execFileSync('sh', ['-c', 'command -v codex'], {encoding: 'utf8', stdio: 'pipe'}).trim();
+		if (caminho.startsWith('/')) return caminho;
+	} catch {}
 };
+export const temCodex = () => Boolean(caminhoCodex());
 
 export function criar(sidebar, ia = 'claude') {
 	const sessao = tmux('display', '-p', '-t', sidebar, '#{session_id}');
