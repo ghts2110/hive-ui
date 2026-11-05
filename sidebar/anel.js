@@ -1,51 +1,43 @@
 // Indicador de uso em braille, com o símbolo de cada IA: cada caractere é
 // uma grade de 2x4 pontos, e no terminal os pontos ficam quase quadrados,
-// então 8 colunas x 4 linhas formam um desenho de 16x16 pontos. O símbolo
+// então 7 colunas x 3 linhas formam um desenho de 14x12 pontos. O símbolo
 // enche a partir do topo, em sentido horário; cada caractere tem uma cor só,
 // e conta como cheio se o ângulo médio dos seus pontos já foi alcançado.
-export const colunas = 8;
-export const linhas = 4;
+export const colunas = 7;
+export const linhas = 3;
 
 const pontos = [[0x01, 0x08], [0x02, 0x10], [0x04, 0x20], [0x40, 0x80]];
 
-// O asterisco de raios irregulares do Claude e o nó de seis elos do Codex
-// (OpenAI): a borda em lobos, o hexágono no meio e os raios em espiral.
+// O asterisco de raios do Claude e o nó de seis elos do Codex (OpenAI): a
+// borda em lobos, o hexágono no meio e os raios que ligam um ao outro.
 const simbolos = {
 	claude: [
-		'       ##       ',
-		'    #  ##  #    ',
-		'    ## ## ##    ',
-		'     # ## #     ',
-		'  #  ######  #  ',
-		'   ## #### ###  ',
-		'    ########    ',
-		'     ######     ',
-		'################',
-		'    #######     ',
-		'   ## #### ##   ',
-		' ##  ### ##  #  ',
-		'     # #  #     ',
-		'    #  #  ##    ',
-		'       #   #    ',
-		'       #        ',
+		'      ##      ',
+		'   #  ##  #   ',
+		'    # ## #    ',
+		'  #  ####  #  ',
+		'   ########   ',
+		'    ######    ',
+		'##############',
+		'   ########   ',
+		' ##  ## #  ## ',
+		'    # #  #    ',
+		'   #  #   #   ',
+		'      #       ',
 	],
 	codex: [
-		'                ',
-		'    #### ###    ',
-		'   ##  ##  ##   ',
-		'   #   #    #   ',
-		'   #  ##   ###  ',
-		'  ##  ########  ',
-		' # ########   # ',
-		' #  ###  ##   # ',
-		' #   ##  ###  # ',
-		' #   ######## # ',
-		'  ########  ##  ',
-		'  ###    #  #   ',
-		'   #    #   #   ',
-		'   ##  ##  ##   ',
-		'    ### ####    ',
-		'                ',
+		'    ##  ##    ',
+		'  ##  ##  ##  ',
+		' #    #     # ',
+		' #   #####  # ',
+		'#  ##    #   #',
+		' # #      # # ',
+		' # #      # # ',
+		'#   #    ##  #',
+		' #  #####   # ',
+		' #     #    # ',
+		'  ##  ##  ##  ',
+		'    ##  ##    ',
 	],
 };
 
