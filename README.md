@@ -44,7 +44,9 @@ hive
 
 ![Escolha de agente, modelo e pasta](docs/gui-agentes.png)
 
-A janela própria usa Electron e carrega os arquivos locais do projeto. O serviço interno escuta apenas em `127.0.0.1`, com uma chave temporária por execução; nenhuma aba é aberta no Chrome ou no navegador padrão. **Fechar a janela ou sair do aplicativo encerra o serviço e suas conversas.** `Ctrl-C` no terminal que abriu o Hive também encerra tudo. Para usar a interface antiga dentro do terminal, execute `hive --terminal`.
+A janela própria usa Electron e carrega os arquivos locais do projeto. O serviço interno escuta apenas em `127.0.0.1`, com uma chave temporária por execução; nenhuma aba é aberta no Chrome ou no navegador padrão. **Fechar a janela ou sair do aplicativo encerra o serviço e suas conversas.** Após a janela abrir, o prompt é liberado e o terminal de origem pode ser fechado sem interromper o aplicativo. Para usar a interface antiga dentro do terminal, execute `hive --terminal`.
+
+O launcher aguarda a confirmação de abertura da janela e informa falhas de inicialização no terminal. O [ciclo de vida do aplicativo](docs/launcher-desacoplado.md) descreve o desacoplamento e sua validação.
 
 Para desenvolvimento, `npm run gui:web` permite abrir a mesma interface no navegador; esse modo não é usado pelo comando `hive`.
 

@@ -25,7 +25,7 @@ app.whenReady().then(() => {
 		responder(permissao === 'notifications' && new URL(webContents.getURL()).origin === origem);
 	});
 	janela.on('page-title-updated', evento => evento.preventDefault());
-	janela.once('ready-to-show', () => janela.show());
+	janela.once('ready-to-show', () => { janela.show(); console.log('HIVE_WINDOW_READY'); });
 	janela.webContents.on('did-fail-load', (_evento, codigo, descricao) => { if (codigo !== -3) { console.error(`hive: não foi possível carregar a interface: ${descricao}`); app.exit(1); } });
 	janela.on('unresponsive', () => console.error('hive: a janela não está respondendo.'));
 	janela.loadURL(link).catch(erro => { console.error(erro.message); app.exit(1); });
