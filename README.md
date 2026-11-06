@@ -46,6 +46,8 @@ hive
 
 A janela própria usa Electron e carrega os arquivos locais do projeto. O serviço interno escuta apenas em `127.0.0.1`, com uma chave temporária por execução; nenhuma aba é aberta no Chrome ou no navegador padrão. **Fechar a janela ou sair do aplicativo encerra o serviço e suas conversas.** `Ctrl-C` no terminal que abriu o Hive também encerra tudo. Para usar a interface antiga dentro do terminal, execute `hive --terminal`.
 
+Atualmente, o launcher mantém o prompt ocupado e o aplicativo ainda depende do terminal de origem. O desacoplamento está [registrado para implementação futura](docs/launcher-desacoplado.md) na issue #55; mantenha esse terminal aberto enquanto usa o Hive.
+
 Para desenvolvimento, `npm run gui:web` permite abrir a mesma interface no navegador; esse modo não é usado pelo comando `hive`.
 
 Testes: `npm run test:gui` executa o Chromium e a janela Electron com agentes falsos, verificando conversas, rascunho, modelos, hooks, busca e encerramento. `npm run test:launcher` verifica o comando padrão e seus aliases. Na primeira execução de desenvolvimento, instale o navegador com `npx playwright install chromium`. `npm test` verifica o modo terminal.
