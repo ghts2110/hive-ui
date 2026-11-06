@@ -96,6 +96,67 @@ test('interface gráfica conecta agentes, preserva rascunho e troca modelos', as
 	expect(errors).toEqual([]);
 });
 
+test('terminal cabe na área visível e envia as dimensões corretas ao redimensionar', async ({page}) => {
+	// Isola a renderização das repinturas assíncronas do tmux.
+	await page.routeWebSocket('**/terminal?**', () => {});
+	await page.addInitScript(() => {
+		const send = WebSocket.prototype.send;
+		WebSocket.prototype.send = function (data) {
+			try {
+				const message = JSON.parse(data);
+				if (message.tipo === 'tamanho') window.ultimoTamanho = message;
+			} catch {}
+			return send.call(this, data);
+		};
+	});
+	await page.goto(link);
+	await expect(page.locator('.conversation-card')).toHaveCount(2);
+	await page.locator('.conversation-card').first().click();
+
+	async function verificarDimensoes() {
+		await expect.poll(() => page.evaluate(() => {
+			const host = document.getElementById('terminal').getBoundingClientRect();
+			const screen = document.querySelector('.xterm-screen')?.getBoundingClientRect();
+			const section = document.getElementById('terminal-section').getBoundingClientRect();
+			const size = window.ultimoTamanho;
+			if (!screen || !size) return ['aguardando terminal'];
+			return Object.entries({
+				conteudo: screen.width > 0 && screen.height > 0,
+				largura: screen.left >= host.left && screen.right <= host.right + 0.5,
+				altura: screen.top >= host.top && screen.bottom <= host.bottom + 0.5,
+				secao: host.bottom <= section.bottom && section.bottom <= innerHeight,
+				janela: document.documentElement.scrollHeight <= innerHeight,
+				dimensoes: size.colunas === terminal.cols && size.linhas === terminal.rows,
+			}).filter(([, ok]) => !ok).map(([name]) => `${name}: ${innerWidth}x${innerHeight}, tela=${screen.width}x${screen.height}, area=${host.width}x${host.height}`);
+		})).toEqual([]);
+		await page.locator('.xterm-helper-textarea').focus();
+		// Desenha na última célula para verificar também a linha inferior e o cursor.
+		await page.evaluate(() => new Promise(resolve => {
+			terminal.write(`\x1b[${terminal.rows};1HULTIMA LINHA\x1b[${terminal.rows};${terminal.cols}H`, resolve);
+		}));
+		await expect(page.locator('.xterm-rows > div').last()).toContainText('ULTIMA LINHA');
+		await expect.poll(() => page.evaluate(() => {
+			const cursor = document.querySelector('.xterm-cursor')?.getBoundingClientRect();
+			const host = document.getElementById('terminal').getBoundingClientRect();
+			return Boolean(cursor && cursor.bottom <= host.bottom + 0.5 && cursor.right <= host.right + 0.5);
+		})).toBe(true);
+	}
+
+	for (const viewport of [{width: 1440, height: 960}, {width: 1024, height: 600}, {width: 800, height: 480}, {width: 640, height: 420}, {width: 1600, height: 900}]) {
+		await page.setViewportSize(viewport);
+		await verificarDimensoes();
+		await page.locator('#toggle-sidebar').click();
+		await verificarDimensoes();
+		await page.locator('#toggle-sidebar').click();
+		await page.locator('.conversation-card').nth(1).click();
+		await expect(page.locator('#agent-name')).toHaveText('Codex');
+		await verificarDimensoes();
+		await page.locator('.conversation-card').first().click();
+		await expect(page.locator('#agent-name')).toHaveText('Claude Code');
+		await verificarDimensoes();
+	}
+});
+
 test('protege comandos locais e rejeita parâmetros inválidos', async ({request, page}) => {
 	expect((await request.get(`${origin}/api/state`)).status()).toBe(401);
 	expect((await request.post(`${origin}/api/conversations`, {headers: {Authorization: `Bearer ${key}`}, data: {agente: 'shell'}})).status()).toBe(400);
