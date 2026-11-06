@@ -70,5 +70,6 @@ try {
 } catch {}
 // Avisa o sidebar para não esperar a próxima leitura.
 try {
-	process.kill(Number(tmux('display', '-p', '-t', tmux('show', '-qv', '@sidebar'), '#{pane_pid}')), 'SIGUSR2');
+	const pid = process.env.HIVE_GUI === '1' ? tmux('show', '-gqv', '@gui_pid') : tmux('display', '-p', '-t', tmux('show', '-qv', '@sidebar'), '#{pane_pid}');
+	if (Number.isInteger(Number(pid)) && Number(pid) > 0) process.kill(Number(pid), 'SIGUSR2');
 } catch {}

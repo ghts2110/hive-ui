@@ -1,12 +1,13 @@
 # hive-ui
 
-Interface para o [Claude Code](https://claude.com/claude-code) no terminal: o Claude Code ocupa a maior parte da tela e, ao lado, uma barra lateral lista as conversas abertas na sessão, com o status de cada uma. O visual e várias funções do sidebar se inspiram no [workmux](https://github.com/raine/workmux).
+Interface local para o [Claude Code](https://claude.com/claude-code) e o Codex, com janela própria, barra lateral de conversas, modelos e terminal integrado. O modo terminal continua disponível; o visual e várias funções do sidebar se inspiram no [workmux](https://github.com/raine/workmux).
 
 ![Três conversas: uma esperando resposta, uma pronta e uma trabalhando; troca entre elas pelo sidebar](docs/demo.gif)
 
-- Digitar `hive` no terminal abre a interface.
-- Cada conversa é um `claude` real rodando em segundo plano; escolher uma no sidebar a traz para a área principal sem perder o estado das outras.
-- Nada das conversas é salvo: ao fechar o terminal, elas somem do sidebar.
+- Digitar `hive` abre o aplicativo Hive em uma janela própria, sem abrir o navegador.
+- `hive --terminal` abre a interface dentro do terminal.
+- Cada conversa executa um agente real; escolher uma no sidebar a traz para a área principal sem perder o estado das outras.
+- A lista de conversas é da sessão: fechar a janela do aplicativo encerra os processos dela. No modo terminal, fechar o terminal encerra a sessão.
 - `claude` continua abrindo o Claude Code puro, sem a interface.
 
 ## Sumário
@@ -14,6 +15,7 @@ Interface para o [Claude Code](https://claude.com/claude-code) no terminal: o Cl
 - [Instalação](#instalação)
 - [Modelos de voz e ditado](#modelos-de-voz-e-ditado)
 - [Primeiro uso](#primeiro-uso)
+- [Interface gráfica](#interface-gráfica)
 - [Funcionalidades](#funcionalidades)
 - [Atalhos](#atalhos)
 - [Claude Code puro](#claude-code-puro)
@@ -21,13 +23,40 @@ Interface para o [Claude Code](https://claude.com/claude-code) no terminal: o Cl
 - [Desinstalar](#desinstalar)
 - [Como funciona](#como-funciona)
 
+## Interface gráfica
+
+Para abrir a interface com botões, cartões e menus em uma janela própria:
+
+```sh
+hive
+```
+
+`hive --gui` continua funcionando como alias, e `npm run gui` abre o mesmo aplicativo dentro do repositório. Depois de atualizar o projeto, rode `npm install` para instalar o runtime da janela e o terminal integrado.
+
+![Interface gráfica local do Hive](docs/gui-inicio.png)
+
+- O **+** abre a escolha entre Claude Code e Codex, com modelo opcional e pasta de trabalho. Um agente instalado é suficiente para usar este modo.
+- Cada conversa executa o agente real em sua própria sessão tmux. Trocar de cartão preserva o processo, a tela e o rascunho. O terminal integrado aceita texto, atalhos, seleção e permissões como o agente original.
+- O cabeçalho identifica agente, versão do aplicativo, modelo, plano e pasta. O botão de modelo abre outra conversa e mantém a atual. Sem dado do agente, o modelo fica em identificação; aliases não presumem uma versão específica.
+- A sidebar oferece busca, status, contadores de alterações, uso dos planos e o botão para ir à próxima conversa pendente. A seta do cabeçalho esconde e mostra a sidebar.
+- **Leitura** e **Ditado** reaproveitam os recursos locais de voz do modo terminal. O ditado preenche o terminal sem enviar a mensagem. Os modelos são baixados apenas ao ligar cada recurso.
+- O ícone de notificações no rodapé da sidebar permite ativar os avisos do aplicativo. Use o ícone de teclado para consultar os atalhos.
+
+![Escolha de agente, modelo e pasta](docs/gui-agentes.png)
+
+A janela própria usa Electron e carrega os arquivos locais do projeto. O serviço interno escuta apenas em `127.0.0.1`, com uma chave temporária por execução; nenhuma aba é aberta no Chrome ou no navegador padrão. **Fechar a janela ou sair do aplicativo encerra o serviço e suas conversas.** `Ctrl-C` no terminal que abriu o Hive também encerra tudo. Para usar a interface antiga dentro do terminal, execute `hive --terminal`.
+
+Para desenvolvimento, `npm run gui:web` permite abrir a mesma interface no navegador; esse modo não é usado pelo comando `hive`.
+
+Testes: `npm run test:gui` executa o Chromium e a janela Electron com agentes falsos, verificando conversas, rascunho, modelos, hooks, busca e encerramento. `npm run test:launcher` verifica o comando padrão e seus aliases. Na primeira execução de desenvolvimento, instale o navegador com `npx playwright install chromium`. `npm test` verifica o modo terminal.
+
 ## Instalação
 
 ### 1. Requisitos
 
 - macOS ou Linux, com zsh ou bash
 - [tmux](https://github.com/tmux/tmux) 3.x
-- [Node](https://nodejs.org) 20+
+- [Node](https://nodejs.org) 22.12+ (requisito do runtime desktop)
 - [Claude Code](https://claude.com/claude-code) instalado e logado
 - Opcional, só para as [conversas do Codex](#conversas-do-codex): o [Codex](https://github.com/openai/codex) instalado e logado (`npm i -g @openai/codex` e `codex login`)
 - Opcional, só para o [ditado por voz](#ditado-por-voz): um gravador de áudio. No macOS, o [ffmpeg](https://ffmpeg.org) ou o `sox`; no Linux, o `parec` (pulseaudio-utils), o `pw-record` (pipewire), o `arecord` (alsa-utils), o `ffmpeg` ou o `sox`.
@@ -78,13 +107,15 @@ A leitura em voz alta e o ditado rodam no próprio computador: funcionam offline
 | Leitura em voz alta | [Piper pt_BR faber](https://huggingface.co/rhasspy/piper-voices/tree/main/pt/pt_BR/faber/medium) | a leitura é ligada pela primeira vez | ~67 MB | ~80 MB |
 | Ditado por voz | [Whisper turbo](https://github.com/openai/whisper) e detector de fala Silero | o microfone é ligado pela primeira vez | ~540 MB | ~1 GB |
 
-Os dois ficam em `~/.cache/hive-ui` (ou `$XDG_CACHE_HOME/hive-ui`), uma pasta por modelo. É a única coisa que o hive-ui grava fora do repositório. Apagar a pasta remove os modelos; eles são baixados de novo na próxima vez que a função for ligada. Um download interrompido (terminal fechado no meio) não deixa um modelo pela metade: recomeça do zero na próxima vez.
+Os dois ficam em `~/.cache/hive-ui` (ou `$XDG_CACHE_HOME/hive-ui`), uma pasta por modelo. No modo terminal, são os únicos arquivos que o hive-ui grava fora do repositório. A janela desktop também usa os diretórios técnicos e de cache do Electron; a lista de conversas permanece apenas na sessão. Apagar a pasta remove os modelos; eles são baixados de novo na próxima vez que a função for ligada. Um download interrompido (terminal fechado no meio) não deixa um modelo pela metade: recomeça do zero na próxima vez.
 
 No Linux, extrair os modelos precisa do `bzip2`. Os modelos rodam em macOS e Linux, Intel e ARM; em outra plataforma, a leitura usa a voz do sistema e o ditado fica indisponível.
 
 ## Primeiro uso
 
-`hive` abre a interface com uma conversa do Claude Code. Argumentos são repassados a ele (`hive --continue`, `hive "corrige o teste"`) e valem só para essa primeira conversa.
+`hive` abre a janela do aplicativo. Clique em **+** para escolher o agente, o modelo e a pasta.
+
+Para usar a interface no terminal, abra com `hive --terminal`. Os passos e atalhos abaixo descrevem esse modo. Argumentos continuam sendo repassados ao agente (`hive --terminal --continue`, `hive --terminal "corrige o teste"`); chamadas antigas com argumentos (`hive --continue`) também continuam compatíveis.
 
 ![Interface recém-aberta: sidebar com uma conversa nova e o Claude Code ao lado](docs/inicio.png)
 
@@ -102,7 +133,7 @@ Fechar o terminal encerra tudo: as conversas, o sidebar e o tmux por trás deles
 
 ![Conversa do Codex esperando permissão para um comando, com o ? azul no sidebar](docs/codex.png)
 
-Com o sidebar focado, `c` abre uma conversa nova com o [Codex](https://github.com/openai/codex) no lugar do Claude Code. Ela fica na lista junto das outras e tem o mesmo comportamento: troca sem perder estado, status, título, aviso com som e no Dock, ditado e leitura em voz alta. O título é o nome que o Codex dá à conversa ou, até ele dar um, a sua primeira mensagem. Cabeçalho fixo, uso do plano e linhas mudadas são do Claude Code e não aparecem nela.
+Com o sidebar focado, `c` abre uma conversa nova com o [Codex](https://github.com/openai/codex) no lugar do Claude Code. Ela fica na lista junto das outras e tem o mesmo comportamento: troca sem perder estado, status, título, aviso com som e no Dock, ditado e leitura em voz alta. O título é o nome que o Codex dá à conversa ou, até ele dar um, a sua primeira mensagem. O cabeçalho acompanha o agente da conversa e mostra versão, modelo e plano quando disponíveis. As linhas mudadas continuam sendo informadas apenas pelo Claude Code.
 
 O status vem dos hooks do Codex, passados só para essa conversa: nada é gravado no `~/.codex`. Sem o Codex instalado, o `c` mostra como instalar. `codex` digitado no terminal continua abrindo o Codex puro.
 
@@ -134,7 +165,15 @@ Trocar de conversa só muda qual `claude` ocupa a área principal: nenhum proces
 
 ### Cabeçalho fixo
 
-Quando o logo do Claude Code (versão, modelo, plano e pasta) rola para fora da conversa, uma cópia dele fica fixa acima dela; se o logo voltar à tela, a cópia sai. Se ele sumir do histórico, aparecem só versão, plano e pasta.
+O cabeçalho de três linhas fica sempre acima da conversa, com símbolo e versão do agente, modelo, plano (quando disponível) e pasta. Ele acompanha a conversa ao alternar entre Claude Code e Codex.
+
+O botão **[+]** ao lado de “Conversas”, na barra lateral, abre as opções **Claude Code** e **Codex**. Clique no agente para iniciar uma conversa na pasta atual. Pelo teclado, `+` ou `a` abre o seletor, `↑`/`↓` escolhe, `Enter` confirma e `Esc` cancela. Os atalhos `n`, `c` e `Ctrl-T` continuam disponíveis.
+
+O cabeçalho separa a versão do aplicativo (ao lado do nome do agente) do modelo em uso, exibido na segunda linha. Sem informação do agente, mostra “aguardando identificação…” em vez de presumir um modelo ou uma versão.
+
+Clique no botão **[ Trocar modelo ▾ ]**, à direita do cabeçalho, para abrir as opções. Pelo teclado, use `Ctrl-]` e `m`. No Claude, escolha Padrão, Opus, Sonnet, Haiku ou Outro ID; no Codex, Padrão, o modelo identificado ou Outro ID. As opções são aliases, sem presumir versões específicas ou disponibilidade na conta. Use `←`/`→`, `Enter` ou clique; `i` permite informar o ID diretamente e `Esc` cancela.
+
+Confirmar um modelo abre **uma nova conversa na mesma pasta**, preservando a anterior com seu processo, histórico e rascunho. O seletor informa esse comportamento antes da confirmação. O modelo escolhido vale apenas para a nova conversa; sua disponibilidade é validada pelo próprio agente. Nenhuma configuração global é alterada.
 
 ### Uso do plano
 
@@ -185,6 +224,8 @@ No macOS, enquanto a interface estiver aberta, o Mac não entra em repouso e a t
 | `p` | sidebar | próxima pendente: a que passou a esperar por você ou terminou sem ser vista, depois as que continuam esperando |
 | `n` / `x` | sidebar | conversa nova / fecha a selecionada (pede confirmação) |
 | `c` | sidebar | conversa nova do Codex |
+| `a` | sidebar | abrir seletor de agentes |
+| `Ctrl-]` | qualquer pane | focar cabeçalho |
 | `h` | sidebar | esconde o sidebar |
 | `<` / `>` | sidebar | estreita / alarga o sidebar (ou arraste a borda) |
 | `v`, clique no alto-falante | sidebar | liga / desliga a leitura em voz alta |
@@ -200,7 +241,7 @@ Fora `Ctrl-\`, `Ctrl-T`, `Ctrl-W` e `Ctrl-Q` (e `Esc`/`Ctrl-C`, que calam a fala
 A interface sempre deixa uma saída para o Claude Code sem nada em volta:
 
 - `claude` abre sempre o Claude Code puro, sem a interface: o hive-ui não o intercepta.
-- Rodar `hive` dentro da interface (ou de qualquer tmux) também abre o Claude Code puro.
+- Rodar `hive --terminal` dentro da interface (ou de qualquer tmux) abre o Claude Code puro. O comando simples `hive` abre o aplicativo próprio.
 - Com o `hive`, modos não interativos e subcomandos (`-p`, `--version`, `--help`, `mcp`, `update`, `doctor`, ...) e uso em pipes ou scripts rodam o Claude Code puro, para a saída não sumir com o tmux.
 
 ## Problemas comuns
@@ -210,7 +251,7 @@ A interface sempre deixa uma saída para o Claude Code sem nada em volta:
 | Mensagem | Causa e solução |
 | --- | --- |
 | `hive: tmux não encontrado. Instale com 'brew install tmux'` | tmux ausente ou fora do PATH. Instale (`brew install tmux`, `apt install tmux`) e abra um terminal novo. |
-| `hive: Node não encontrado. Instale o Node 20+` | Node ausente ou fora do PATH. Confira `command -v node` num terminal novo; com nvm carregado sob demanda (lazy load), carregue-o no início do shell ou rode `nvm alias default 20`. |
+| `hive: Node não encontrado. Instale o Node 22.12+` | Node ausente ou fora do PATH. Confira `command -v node` num terminal novo; com nvm carregado sob demanda (lazy load), carregue-o no início do shell ou rode `nvm alias default 22`. |
 | `hive: dependências faltando. Rode 'npm install' em ...` | Faltou o passo 2: rode `npm install` na pasta clonada. |
 | `hive: Claude Code não encontrado no PATH.` | O binário `claude` não está no PATH. Instale o Claude Code e confira com `command -v claude`. |
 | `zsh: command not found: hive` | Faltou o `npm link` na pasta clonada, ou ele rodou em outra versão do Node (nvm). Rode `npm link` na pasta e abra um terminal novo. |
@@ -241,7 +282,7 @@ Enquanto não resolve, `claude` abre o Claude Code puro.
 3. Apague os modelos da leitura em voz alta e do ditado, se foram baixados: `rm -rf ~/.cache/hive-ui`.
 4. Opcional: tire o acesso do Terminal ao microfone em Ajustes do Sistema > Privacidade e Segurança > Microfone, se só o liberou para o ditado.
 
-Não sobra mais nada: fora esses modelos, o projeto não salva arquivos fora do repositório e cada sessão do tmux morre com o terminal.
+Não sobra mais nada: o modo terminal não salva outros arquivos fora do repositório e cada sessão do tmux morre com o terminal. O aplicativo desktop também pode deixar cache técnico do Electron nos diretórios do sistema.
 
 ## Como funciona
 
@@ -249,7 +290,8 @@ Não sobra mais nada: fora esses modelos, o projeto não salva arquivos fora do 
 - **Node + [Ink](https://github.com/vadimdemedes/ink)** desenha o sidebar, que conversa com o tmux pela linha de comando.
 - **Hooks e statusline do Claude Code** avisam o sidebar quando uma conversa muda de status, ganha título ou edita arquivos, e trazem o uso do plano. Nas conversas do Codex, os hooks dele fazem o mesmo papel no status.
 - **[sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)** roda a voz da leitura e o reconhecimento do ditado localmente.
-- O `hive` é um link, criado pelo `npm link`, para o launcher do projeto (`bin/hive`), que abre o tmux e chama o binário `claude` do PATH; o `claude` em si não é interceptado.
+- O `hive` é um link, criado pelo `npm link`, para o launcher do projeto (`bin/hive`). Sem argumentos, abre a janela Electron e o serviço local em processos separados. O terminal e a voz usam o Node do usuário. Fechar a janela encerra o serviço e o servidor tmux privado. O `claude` em si não é interceptado.
+- `hive --terminal` mantém o layout tmux e a sidebar Ink.
 
 Testes do launcher: `npm test`.
 

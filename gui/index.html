@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0b1015">
+  <title>Hive · seu espaço de trabalho</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230c171d'/%3E%3Cpath d='m17 20 12 12-12 12m18 0h13' fill='none' stroke='%2322d3ee' stroke-width='5'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/vendor/xterm.css">
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/vendor/xterm.js"></script>
+  <script defer src="/vendor/fit.js"></script>
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <div class="workspace">
+    <aside class="sidebar" aria-label="Conversas">
+      <div class="brand"><span class="brand-mark" data-icon="terminal"></span><span>hive<span class="brand-dot">.</span></span><span class="local-badge">LOCAL</span></div>
+      <div class="workspace-label"><span data-icon="folder"></span><span id="workspace-name">Seu espaço de trabalho</span></div>
+      <div class="sidebar-heading"><h1>Conversas <span id="conversation-count">0</span></h1><button class="icon-button primary" id="new-conversation" aria-label="Nova conversa" title="Nova conversa · Ctrl-T" data-icon="plus"></button></div>
+      <label class="search"><span data-icon="search"></span><input id="search" type="search" placeholder="Buscar conversa…" aria-label="Buscar conversa"><kbd>⌘ K</kbd></label>
+      <nav id="conversation-list" class="conversation-list" aria-label="Lista de conversas"></nav>
+      <div class="sidebar-bottom">
+        <button class="pending-button" id="pending"><span data-icon="inbox"></span><span>Precisa da sua atenção</span><span id="pending-count">0</span></button>
+        <section class="usage" id="usage" aria-label="Uso dos planos"></section>
+        <div class="sidebar-footer"><span class="connection-dot"></span><span id="connection-label">Conectando…</span><button class="icon-button" id="help" aria-label="Atalhos de teclado" title="Atalhos de teclado" data-icon="keyboard"></button></div>
+      </div>
+    </aside>
+    <main>
+      <header class="topbar"><div class="breadcrumb"><button class="icon-button" id="toggle-sidebar" aria-label="Mostrar ou esconder sidebar" data-icon="panel"></button><span id="breadcrumb-folder">Workspace</span><span class="slash">/</span><span id="breadcrumb-title">Visão geral</span></div><span class="private-label"><span data-icon="shield"></span> No seu computador</span></header>
+      <section class="agent-header" id="agent-header" hidden aria-label="Agente e modelo">
+        <div class="agent-identity"><div class="agent-avatar" id="agent-avatar" data-icon="claude"></div><div><div class="agent-name"><h2 id="agent-name"></h2><span class="version" id="agent-version"></span><span class="status-badge" id="agent-status"></span></div><div class="agent-details"><span id="agent-plan"></span><span class="agent-path"><span data-icon="folder"></span><span id="agent-path"></span></span></div></div></div>
+        <button class="model-button" id="model-button" aria-haspopup="dialog"><span data-icon="cube"></span><span><small>MODELO</small><strong id="model-name">Identificando…</strong></span><span data-icon="chevron"></span></button>
+      </section>
+      <div class="notice" id="notice" role="status" hidden><span data-icon="info"></span><span id="notice-text"></span><button class="icon-button" id="dismiss-notice" aria-label="Fechar aviso" data-icon="close"></button></div>
+      <section class="welcome" id="welcome">
+        <div class="welcome-grid"></div>
+        <div class="welcome-content"><span class="eyebrow"><span class="connection-dot"></span> UM ESPAÇO. SEUS AGENTES.</span><div class="welcome-symbol" data-icon="terminal"></div><h2>Boas ideias merecem<br>um espaço para acontecer<span>.</span></h2><p>Claude Code e Codex, lado a lado.<br>Abra uma conversa e continue de onde a inspiração vier.</p><button class="button accent" id="welcome-create"><span data-icon="plus"></span> Nova conversa <kbd>⌃ T</kbd></button><div class="welcome-features"><span><span data-icon="layers"></span> Conversas independentes</span><span><span data-icon="shield"></span> Execução local</span></div></div>
+        <div class="welcome-bottom"><span>Feito para quem constrói.</span><span>HIVE WORKSPACE <span class="brand-dot">/</span> 01</span></div>
+      </section>
+      <section class="terminal-section" id="terminal-section" hidden aria-label="Terminal da conversa"><div class="terminal-toolbar"><span><span class="connection-dot"></span><span id="terminal-label">Conversa ao vivo</span></span><div><button class="text-button" id="terminal-focus" title="Focar terminal"><span data-icon="terminal"></span> Terminal</button><button class="icon-button" id="close-conversation" title="Fechar conversa" aria-label="Fechar conversa" data-icon="close"></button></div></div><div id="terminal"></div><div class="terminal-reconnect" id="terminal-reconnect" hidden>Reconectando ao agente…</div></section>
+      <footer class="statusbar"><span class="session-indicator"><span class="connection-dot"></span><span id="session-label">Pronto para começar</span></span><div class="statusbar-actions"><span class="key-hint"><kbd>Esc</kbd> interromper</span><button class="tool-button" id="voice-button" aria-pressed="false" title="Leitura em voz alta"><span data-icon="volume"></span><span>Leitura</span></button><button class="tool-button" id="mic-button" aria-pressed="false" title="Ditado · Ctrl-Q"><span data-icon="mic"></span><span>Ditado</span></button></div></footer>
+    </main>
+  </div>
+  <dialog id="create-dialog" class="modal create-modal" aria-labelledby="create-title"><form id="create-form"><div class="modal-header"><span class="modal-icon" data-icon="layers"></span><button type="button" class="icon-button" data-dismiss aria-label="Fechar" data-icon="close"></button></div><span class="eyebrow">NOVA CONVERSA</span><h2 id="create-title">Com quem vamos construir?</h2><p class="modal-description">Escolha um agente. Cada conversa tem seu próprio espaço.</p><div class="agent-choices" id="agent-choices"></div><label class="field-label" for="create-model">Modelo <span>opcional</span></label><select id="create-model"><option value="">Padrão do agente</option></select><input id="create-custom-model" class="custom-model" placeholder="ID do modelo" aria-label="ID do modelo" hidden><label class="field-label" for="create-folder">Pasta do projeto</label><div class="folder-input"><span data-icon="folder"></span><input id="create-folder" required placeholder="/caminho/do/projeto" aria-label="Pasta do projeto"></div><p class="field-help">A conversa começa nesta pasta, com as configurações do seu agente.</p><p class="form-error" id="create-error" role="alert"></p><div class="modal-footer"><button type="button" class="button secondary" data-dismiss>Cancelar</button><button type="submit" class="button accent" id="create-submit">Iniciar conversa <span data-icon="arrow"></span></button></div></form></dialog>
+  <dialog id="model-dialog" class="modal model-modal" aria-labelledby="model-title"><div class="modal-header"><span class="modal-icon" data-icon="cube"></span><button class="icon-button" data-dismiss aria-label="Fechar" data-icon="close"></button></div><span class="eyebrow">ESCOLHER MODELO</span><h2 id="model-title">O modelo certo para sua ideia.</h2><p class="modal-description">Abre uma nova conversa. O histórico e o rascunho atuais continuam preservados.</p><form id="model-form"><div class="model-options" id="model-options"></div><label class="field-label" for="custom-model">Ou informe o ID do modelo</label><input id="custom-model" placeholder="ID aceito pelo agente" autocomplete="off"><p class="field-help">Versões e disponibilidade são definidas pelo agente e pela sua conta.</p><p class="form-error" id="model-error" role="alert"></p><div class="modal-footer"><button type="button" class="button secondary" data-dismiss>Cancelar</button><button type="submit" class="button accent" id="model-submit">Abrir conversa <span data-icon="arrow"></span></button></div></form></dialog>
+  <dialog id="close-dialog" class="modal compact-modal" aria-labelledby="close-title"><div class="modal-header"><span class="modal-icon" data-icon="close"></span><button class="icon-button" data-dismiss aria-label="Cancelar" data-icon="close"></button></div><h2 id="close-title">Encerrar esta conversa?</h2><p class="modal-description">O processo do agente será encerrado. As outras conversas continuam abertas.</p><div class="modal-footer"><button class="button secondary" data-dismiss>Manter aberta</button><button class="button danger" id="confirm-close">Encerrar conversa</button></div></dialog>
+  <dialog id="help-dialog" class="modal compact-modal" aria-labelledby="help-title"><div class="modal-header"><span class="modal-icon" data-icon="keyboard"></span><button class="icon-button" data-dismiss aria-label="Fechar" data-icon="close"></button></div><h2 id="help-title">No seu ritmo.</h2><p class="modal-description">Os controles estão a um clique. Os atalhos, sempre por perto.</p><dl class="shortcuts"><div><dt>Nova conversa</dt><dd><kbd>Ctrl T</kbd></dd></div><div><dt>Buscar conversa</dt><dd><kbd>⌘ / Ctrl K</kbd></dd></div><div><dt>Conversa anterior</dt><dd><kbd>Alt ←</kbd></dd></div><div><dt>Próxima pendente</dt><dd><kbd>Alt P</kbd></dd></div><div><dt>Ditado</dt><dd><kbd>Ctrl Q</kbd></dd></div><div><dt>Escolher modelo</dt><dd><kbd>Ctrl ]</kbd></dd></div><div><dt>Interromper agente</dt><dd><kbd>Esc</kbd></dd></div></dl><p class="field-help">Se o navegador reservar um atalho, use o botão correspondente na interface.</p></dialog>
+  <div class="toast" id="toast" role="alert" hidden></div>
+</body>
+</html>

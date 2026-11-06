@@ -36,7 +36,7 @@ export function ler(codex, sinal, prazo = 15000) {
 			const conta = respostas[2]?.account?.type;
 			const limites = respostas[3]?.rateLimits;
 			const uso = limites ? `${janela(limites, 300)} ${janela(limites, 10080)}` : '';
-			resolve(conta ? {conta, uso} : {});
+			resolve(conta ? {conta, uso, plano: respostas[2]?.account?.planType} : {});
 		};
 		const limite = setTimeout(fim, prazo);
 		servidor.on('error', fim);

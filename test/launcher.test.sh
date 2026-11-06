@@ -47,6 +47,7 @@ chmod +x "$FAKE/claude"
 # estiverem em $TMP/uso-codex ("% reinício"), como o sidebar/plano.js pede.
 cat > "$FAKE/codex" <<FAKE
 #!/bin/sh
+[ "\$1" = --version ] && { echo "codex-cli 9.8.7"; exit; }
 if [ "\$1" = app-server ]; then
 	while read -r linha; do
 		id=\$(printf '%s' "\$linha" | sed -n 's/^{"id":\([0-9]*\).*/\1/p')
@@ -118,7 +119,7 @@ abrir() {
 	FAKE_SLEEP=$1; shift
 	FAKE_SLEEP=$FAKE_SLEEP FAKE_LOGO=1 PATH="${CAMINHO:-$FAKE:$PATH}" TMUX= HIVE= \
 		script -q /dev/null sh -c 'stty cols 120 rows 30; exec "$0" "$@"' \
-		"${LAUNCHER:-$ROOT/bin/hive}" "$@" </dev/null >/dev/null 2>&1 &
+		"${LAUNCHER:-$ROOT/bin/hive}" --terminal "$@" </dev/null >/dev/null 2>&1 &
 	PID=$!
 	sleep 2
 }
@@ -151,7 +152,7 @@ PATH="$FAKE:$PATH" HIVE=1 HIVE_BIN="$ROOT/bin/hive" zsh -fc 'claude() { "$HIVE_B
 SEM_TMUX="$TMP/sem-tmux"; mkdir -p "$SEM_TMUX"
 ln -s "$FAKE/claude" "$SEM_TMUX/claude"
 PATH="$SEM_TMUX:/usr/bin:/bin" TMUX= HIVE= \
-	script -q "$TMP/saida" "$ROOT/bin/hive" </dev/null >/dev/null 2>&1
+	script -q "$TMP/saida" "$ROOT/bin/hive" --terminal </dev/null >/dev/null 2>&1
 saida=$(cat "$TMP/saida")
 echo "$saida" | grep -q "tmux não encontrado" \
 	&& ok "sem tmux mostra mensagem" || falha "sem tmux mostra mensagem: $saida"
@@ -159,7 +160,7 @@ echo "$saida" | grep -q "tmux não encontrado" \
 # Layout e argumentos.
 abrir 150 --model opus "olá mundo" ";" "x;" '$HOME' '\;' 'dir#S'
 panes=$(T list-panes -t "$(T show -v @sidebar)" -F '#{pane_left}:#{pane_width}' | tr '\n' ' ')
-[ "$panes" = "0:24 25:95 " ] && ok "sidebar à esquerda e claude no resto" \
+[ "$panes" = "0:24 25:95 25:95 " ] && ok "sidebar à esquerda e claude no resto" \
 	|| falha "layout inesperado: $panes"
 esperado=$(printf '%s\n' --settings "$ROOT/sidebar/hooks.json" --model opus "olá mundo" ";" "x;" '$HOME' '\;' 'dir#S')
 [ "$(cat "$TMP/args")" = "$esperado" ] && ok "argumentos chegam ao claude" \
@@ -170,28 +171,27 @@ grep -q "HIVE=1" "$TMP/env" && ok "claude roda marcado como dentro da interface"
 	&& ok "caffeinate segura repouso e tela enquanto o cliente do tmux vive" \
 	|| falha "caffeinate: $(cat "$TMP/caffeinate" 2>/dev/null | tr '\n' ' ')"
 
-# Cabeçalho fixo acima da conversa, copiando o logo do claude, só depois que
-# o logo original rola para fora (Enter ecoa linhas em branco no claude falso).
+# Cabeçalho sempre acessível, mesmo com o logo original na tela.
 cab=$(T show -v @cabecalho)
 janela() { T display -p -t "$1" '#{window_id}'; }
-[ "$(janela "$cab")" != "$(janela "$(T show -v @sidebar)")" ] \
-	&& ok "sem cabeçalho com o logo original na tela" || falha "cabeçalho com o logo na tela"
+[ "$(janela "$cab")" = "$(janela "$(T show -v @sidebar)")" ] \
+	&& ok "cabeçalho acessível desde o início" || falha "cabeçalho ausente"
 conversa=$(T list-panes -a -F '#{pane_id} #{@conversa}' | awk '$2 { print $1 }')
 for _ in $(seq 40); do T send-keys -t "$conversa" Enter; done
 sleep 1.5
 geometria=$(T display -p -t "$cab" '#{pane_left}:#{pane_top}:#{pane_height}')
 [ "$geometria" = "25:0:3" ] && ok "cabeçalho acima da conversa" || falha "cabeçalho: $geometria"
 T capture-pane -p -t "$cab" | head -1 | grep -q "Claude Code v9.9.9" \
-	&& T capture-pane -p -t "$cab" | grep -q "Modelo · Claude Max" \
-	&& ok "cabeçalho copia o logo do claude" || falha "logo: $(T capture-pane -p -t "$cab")"
-T capture-pane -p -t "$cab" | head -1 | grep -q "^ ▐▛█" && ok "logo mantém o alinhamento" \
+	&& T capture-pane -p -t "$cab" | grep -q "Claude Max" \
+	&& ok "cabeçalho identifica o Claude e seu plano" || falha "logo: $(T capture-pane -p -t "$cab")"
+T capture-pane -p -t "$cab" | head -1 | grep -q "Trocar modelo" && ok "cabeçalho oferece botão de modelo" \
 	|| falha "alinhamento: $(T capture-pane -p -t "$cab" | head -1)"
 T resize-window -x 120 -y 50; sleep 1; T resize-window -x 120 -y 20; sleep 1
 [ "$(T display -p -t "$cab" '#{pane_height}')" = 3 ] && ok "cabeçalho mantém 3 linhas ao redimensionar" \
 	|| falha "altura do cabeçalho: $(T display -p -t "$cab" '#{pane_height}')"
 T resize-window -x 120 -y 30; sleep 1
 T select-pane -t "$cab"; sleep 1
-[ -n "$(T display -p '#{@conversa}')" ] && ok "foco no cabeçalho passa para a conversa" \
+[ "$(T display -p '#{pane_id}')" = "$cab" ] && ok "cabeçalho recebe foco para escolher modelo" \
 	|| falha "foco ficou em $(T display -p '#{pane_id}')"
 
 T resize-window -x 180 -y 30
@@ -215,8 +215,8 @@ sair() {
 tecla n; tecla n
 [ "$(conversas)" = "1 2 3 " ] && [ "$(na_tela)" = 3 ] \
 	&& ok "n cria conversa na área principal" || falha "n: $(conversas)/$(na_tela)"
-[ "$(janela "$cab")" != "$(janela "$sb")" ] && [ "$(T display -p -t "$sb" '#{window_height}')" = 30 ] \
-	&& ok "conversa nova na tela tira o cabeçalho" || falha "cabeçalho na conversa nova"
+[ "$(janela "$cab")" = "$(janela "$sb")" ] && [ "$(T display -p -t "$sb" '#{window_height}')" = 30 ] \
+	&& ok "conversa nova mantém os controles do cabeçalho" || falha "cabeçalho na conversa nova"
 tecla Up; tecla Enter
 [ "$(na_tela)" = 2 ] && [ "$(T display -p '#{@conversa}')" = 2 ] \
 	&& ok "enter traz a conversa para a tela" || falha "enter: $(na_tela)"
@@ -604,11 +604,42 @@ grep -qx -- "--no-daemon" "$TMP/codex-args" && grep -q '^hooks\.Stop=.*status.js
 	&& grep -q '^hooks\.state=.*:stop:0:0"={trusted_hash="sha256:' "$TMP/codex-args" \
 	&& ok "codex recebe os hooks de status e a confiança neles" || falha "args do codex: $(tr '\n' '|' < "$TMP/codex-args")"
 sleep 1
-[ "$(janela "$cab")" != "$(janela "$sb")" ] && ok "conversa do codex fica sem o cabeçalho do claude" \
+[ "$(janela "$cab")" = "$(janela "$sb")" ] && T capture-pane -p -t "$cab" | grep -q "Codex v9.8.7" && ! T capture-pane -p -t "$cab" | grep -q "Claude Max" && ok "conversa do codex tem cabeçalho próprio" \
 	|| falha "cabeçalho na conversa do codex"
 item "○ nova conversa" >/dev/null && ok "codex sem nome tem título provisório" || falha "título codex: $(T capture-pane -p -t "$sb")"
 T select-pane -t "$codex" -T "Revisa o parser"; sleep 1.5
 item "Revisa o parser" >/dev/null && ok "nome do codex vira o título" || falha "nome codex: $(T capture-pane -p -t "$sb")"
+# Modelo escolhido vai para uma nova conversa e preserva o pane anterior.
+T select-pane -t "$cab"; sleep 0.6
+T send-keys -t "$cab" m; sleep 0.3
+T send-keys -t "$cab" i; sleep 0.3
+T send-keys -t "$cab" -l 'modelo-teste'; T send-keys -t "$cab" Enter; sleep 2
+novo=$(T list-panes -t "$sb" -F '#{pane_id} #{@conversa}' | awk '$2 { print $1 }')
+[ "$(conversas)" = "1 2 3 " ] && [ "$novo" != "$codex" ] && [ "$(T show -pv -t "$novo" @modelo)" = modelo-teste ] && grep -qx 'modelo-teste' "$TMP/codex-args" \
+	&& ok "modelo abre nova conversa do mesmo agente e preserva a anterior" || falha "modelo: $(conversas)/$(cat "$TMP/codex-args")"
+# Botão + na sidebar abre o seletor; cancelar não cria panes.
+T select-pane -t "$sb"; sleep 0.6
+T capture-pane -p -t "$sb" | head -1 | grep -q '\[+\]' \
+	&& ok "sidebar mostra botão de nova conversa" || falha "botão + ausente"
+T send-keys -t "$sb" -l "$(printf '\033[<0;22;1M')"; sleep 0.3
+T capture-pane -p -t "$sb" | grep -q 'Escolha o agente' \
+	&& ok "clique no + abre agentes" || falha "seletor não abriu"
+T send-keys -t "$sb" Escape; sleep 0.5
+[ "$(conversas)" = "1 2 3 " ] && ok "cancelar seleção preserva as conversas" || falha "cancelar agente"
+tecla +
+T send-keys -t "$sb" -l "$(printf '\033[<0;8;4M')"; sleep 2
+[ "$(conversas)" = "1 2 3 4 " ] && T capture-pane -p -t "$cab" | grep -q 'Claude Code' && ! grep -q 'modelo-teste' "$TMP/args" \
+	&& ok "escolher agente preserva conversa e não herda modelo do Codex" || falha "trocar agente: $(conversas)"
+# Mouse só abre o modelo sobre o botão, nunca sobre a identidade.
+T select-pane -t "$cab"; sleep 0.6
+T send-keys -t "$cab" -l "$(printf '\033[<0;5;1M')"; sleep 0.3
+T capture-pane -p -t "$cab" | grep -q 'Trocar modelo' \
+	&& ok "identidade do agente não dispara ação" || falha "clique fora do botão"
+T send-keys -t "$cab" m; sleep 0.3
+T send-keys -t "$cab" Right; T send-keys -t "$cab" Enter; sleep 2
+novo=$(T list-panes -t "$sb" -F '#{pane_id} #{@conversa}' | awk '$2 { print $1 }')
+[ "$(conversas)" = "1 2 3 4 5 " ] && [ "$(T show -pv -t "$novo" @modelo)" = opus ] \
+	&& ok "lista de modelos abre seleção e preserva histórico" || falha "modelo selecionado"
 T kill-server 2>/dev/null; wait "$PID" 2>/dev/null
 
 # Sem o Codex instalado: o c diz como instalar. Só o node no PATH, além do
@@ -621,6 +652,11 @@ CAMINHO="$TMP/sem-codex:/usr/bin:/bin"
 abrir 90
 CAMINHO=
 sb=$(T show -v @sidebar)
+tecla +
+T send-keys -t "$sb" Down; T send-keys -t "$sb" Enter; sleep 0.5
+T capture-pane -p -t "$sb" | grep -q "Codex não encontrado" && [ "$(conversas)" = "1 " ] \
+	&& ok "seletor informa Codex ausente sem criar conversa" || falha "Codex ausente no seletor"
+tecla Escape
 tecla c
 T capture-pane -p -t "$sb" | grep -q "Codex não encontrado" && [ "$(conversas)" = "1 " ] \
 	&& ok "sem codex, c diz como instalar" || falha "sem codex: $(T capture-pane -p -t "$sb")"

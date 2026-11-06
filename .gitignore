@@ -147,3 +147,7 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Navegador e relatórios dos testes gráficos.
+test-results/
+playwright-report/

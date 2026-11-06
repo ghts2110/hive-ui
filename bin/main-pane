@@ -7,8 +7,8 @@ sidebar=$(tmux split-window -hbd -l 24 -P -F '#{pane_id}' -- \
 tmux set -q @sidebar "$sidebar"
 
 # Cabeçalho fixo acima da conversa (ver sidebar/cabecalho.js): 3 linhas, a
-# altura do logo do Claude Code. Começa guardado numa janela própria e só
-# aparece quando o logo original rola para fora.
+# altura do logo do Claude Code. O processo o traz para cima da conversa
+# quando ela estiver pronta, com seleção de agente e modelo.
 cabecalho=$(tmux new-window -d -P -F '#{pane_id}' -- \
 	"$HIVE_NODE" "$HIVE_ROOT/sidebar/cabecalho.js")
 tmux set -q @cabecalho "$cabecalho"
@@ -35,6 +35,7 @@ tmux bind -n MouseDragEnd1Pane "$guardar ; $aplicar ; send -M"
 acao="$HIVE_NODE $HIVE_ROOT/sidebar/acao.js"
 tmux bind -n C-t run-shell -b "$acao nova $sidebar"
 tmux bind -n C-q run-shell -b "$acao ditar $sidebar"
+tmux bind -n 'C-]' select-pane -t "$cabecalho"
 tmux bind -n C-w confirm-before -b -c s -p "fechar a conversa da tela? (s/n)" \
 	"run-shell -b '$acao fechar $sidebar'"
 
