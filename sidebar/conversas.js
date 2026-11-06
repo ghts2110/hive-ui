@@ -69,9 +69,13 @@ export const caminhoCodex = () => {
 };
 export const temCodex = () => Boolean(caminhoCodex());
 
-export function criar(sidebar, ia = 'claude') {
+export function criar(sidebar, ia = 'claude', modelo = '') {
+	if (!['claude', 'codex'].includes(ia)) throw new Error('Agente inválido.');
+	if (modelo && !/^[a-zA-Z0-9][a-zA-Z0-9._:/\[\]-]{0,199}$/.test(modelo)) throw new Error('Modelo inválido.');
 	const sessao = tmux('display', '-p', '-t', sidebar, '#{session_id}');
-	return tmux('new-window', '-d', '-t', `${sessao}:`, '-e', `HIVE_IA=${ia}`, '-P', '-F', '#{pane_id}', '--', conversa);
+	const atual = naTela(sidebar);
+	const pasta = atual ? tmux('display', '-p', '-t', atual, '#{pane_current_path}') : process.cwd();
+	return tmux('new-window', '-d', '-t', `${sessao}:`, '-c', pasta, '-e', `HIVE_IA=${ia}`, '-e', `HIVE_MODELO=${modelo}`, '-P', '-F', '#{pane_id}', '--', conversa);
 }
 
 // Traz a conversa para a área principal; a que estava lá vai para a janela dela.
@@ -124,8 +128,8 @@ export function abrir(sidebar, id) {
 	tmux('select-pane', '-t', id);
 }
 
-export function nova(sidebar, ia) {
-	const id = criar(sidebar, ia);
+export function nova(sidebar, ia, modelo) {
+	const id = criar(sidebar, ia, modelo);
 	abrir(sidebar, id);
 	return id;
 }

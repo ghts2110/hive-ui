@@ -13,6 +13,24 @@ ia=${HIVE_IA:-claude}
 # o nome dela.
 [ "$ia" = codex ] && printf '\033]2;\033\\'
 tmux set -p -t "$TMUX_PANE" @ia "$ia"
+# O modelo escolhido no cabeçalho vale só para esta conversa.
+if [ -n "$HIVE_MODELO" ]; then
+	set -- --model "$HIVE_MODELO" "$@"
+	tmux set -p -t "$TMUX_PANE" @modelo "$HIVE_MODELO"
+else
+	# Também identifica o modelo recebido na chamada inicial: hive --model …
+	proximo_modelo=0
+	for argumento do
+		if [ "$proximo_modelo" = 1 ]; then
+			tmux set -p -t "$TMUX_PANE" @modelo "$argumento"
+			proximo_modelo=0
+		fi
+		case $argumento in
+			--model | -m) proximo_modelo=1 ;;
+			--model=*) tmux set -p -t "$TMUX_PANE" @modelo "${argumento#--model=}" ;;
+		esac
+	done
+fi
 
 # Hooks marcam título e status da conversa para o sidebar. No Codex, vão por
 # -c (ver sidebar/codex.js), um por linha; o título do terminal fica só com o
@@ -43,6 +61,12 @@ fi
 if [ $status -ne 0 ]; then
 	printf '\n%s saiu com status %s. Pressione Enter para fechar.' "$ia" "$status"
 	read -r _
+fi
+
+# No modo gráfico, cada conversa tem sua sessão isolada. O servidor acompanha
+# o encerramento e atualiza a seleção sem manipular os panes de outras sessões.
+if [ "$HIVE_GUI" = 1 ]; then
+	exit "$status"
 fi
 
 tmux set -pu -t "$TMUX_PANE" @conversa

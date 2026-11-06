@@ -13,6 +13,11 @@ import {homedir} from 'node:os';
 import {join} from 'node:path';
 import {tmux} from './conversas.js';
 
+const avisar = () => {
+	const pid = process.env.HIVE_GUI === '1' ? tmux('show', '-gqv', '@gui_pid') : tmux('display', '-p', '-t', tmux('show', '-qv', '@sidebar'), '#{pane_pid}');
+	if (Number.isInteger(Number(pid)) && Number(pid) > 0) process.kill(Number(pid), 'SIGUSR2');
+};
+
 let entrada = '';
 try {
 	entrada = readFileSync(0, 'utf8');
@@ -34,13 +39,13 @@ if (Number.isFinite(janela?.used_percentage) && Number.isFinite(janela?.resets_a
 	try {
 		let uso = `${janela.used_percentage} ${janela.resets_at}`;
 		if (Number.isFinite(semana?.used_percentage) && Number.isFinite(semana?.resets_at)) uso += ` ${semana.used_percentage} ${semana.resets_at}`;
-		const [usado, reinicia, usadoSemana] = tmux('show', '-qv', '@uso').split(' ').map(Number);
+		const [usado, reinicia, usadoSemana] = tmux('show', process.env.HIVE_GUI === '1' ? '-gqv' : '-qv', '@uso').split(' ').map(Number);
 		const mesma = reinicia === janela.resets_at;
 		const semanaSubiu = Number.isFinite(semana?.used_percentage) && !(usadoSemana >= semana.used_percentage);
 		const novo = !(reinicia >= janela.resets_at) || (mesma && janela.used_percentage > usado) || (mesma && janela.used_percentage === usado && semanaSubiu);
 		if (novo) {
-			tmux('set', '-q', '@uso', uso);
-			process.kill(Number(tmux('display', '-p', '-t', tmux('show', '-qv', '@sidebar'), '#{pane_pid}')), 'SIGUSR2');
+			tmux('set', process.env.HIVE_GUI === '1' ? '-gq' : '-q', '@uso', uso);
+			avisar();
 		}
 	} catch {}
 }
@@ -53,6 +58,11 @@ if (Number.isFinite(janela?.used_percentage) && Number.isFinite(janela?.resets_a
 // quando muda.
 const {total_lines_added: mais, total_lines_removed: menos} = dados.cost ?? {};
 const pane = process.env.TMUX_PANE;
+if (pane && dados.model?.display_name) {
+	try {
+		tmux('set', '-p', '-t', pane, '@modelo', dados.model.display_name);
+	} catch {}
+}
 if (pane && Number.isFinite(mais) && Number.isFinite(menos)) {
 	try {
 		tmux('set', '-p', '-t', pane, '@linhas_total', `${mais} ${menos}`);
@@ -64,7 +74,7 @@ if (pane && Number.isFinite(mais) && Number.isFinite(menos)) {
 		const linhas = `${mais - base} ${menos - baseMenos}`;
 		if (tmux('show', '-pqv', '-t', pane, '@linhas') !== linhas) {
 			tmux('set', '-p', '-t', pane, '@linhas', linhas);
-			process.kill(Number(tmux('display', '-p', '-t', tmux('show', '-qv', '@sidebar'), '#{pane_pid}')), 'SIGUSR2');
+			avisar();
 		}
 	} catch {}
 }

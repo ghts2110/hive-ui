@@ -1,6 +1,6 @@
 #!/bin/sh
-# Launcher do hive-ui: abre o tmux com o sidebar à esquerda e o Claude Code
-# ocupando o resto. Argumentos são repassados ao Claude Code.
+# O comando simples abre a janela do Hive. --terminal mantém a interface
+# tmux; argumentos e subcomandos do Claude continuam compatíveis.
 
 # Instalado pelo `npm link`, o `hive` do PATH é um link para este arquivo:
 # segue os links até o repositório.
@@ -13,6 +13,18 @@ while [ -L "$SELF" ]; do
 	esac
 done
 ROOT=$(cd "$(dirname "$SELF")/.." && pwd -P)
+
+# A interface gráfica é um aplicativo próprio, sem abrir o navegador.
+if [ "$#" -eq 0 ] || [ "$1" = --gui ]; then
+	[ "$#" -eq 0 ] || shift
+	if [ "$#" -gt 0 ]; then
+		echo "hive --gui: escolha o agente, o modelo e a pasta pela interface." >&2
+		exit 1
+	fi
+	exec node "$ROOT/gui/desktop.js"
+fi
+
+[ "$1" != --terminal ] || shift
 
 # Binário original, nunca a função antiga `claude()` do ~/.zshrc, que chama
 # este launcher: só um caminho serve, senão seria uma função exportada (bash
@@ -51,7 +63,7 @@ fi
 
 NODE_BIN=$(command -v node)
 if [ -z "$NODE_BIN" ]; then
-	echo "hive: Node não encontrado. Instale o Node 20+" >&2
+	echo "hive: Node não encontrado. Instale o Node 22.12+" >&2
 	echo "ou use 'claude' para abrir o Claude Code sem a interface." >&2
 	exit 1
 fi
@@ -88,4 +100,4 @@ fi
 exec tmux -L "${HIVE_SOCKET:-hive-$$}" -f "$ROOT/tmux.conf" \
 	new-session -s hive \
 	-e HIVE=1 -e HIVE_ROOT="$ROOT" -e HIVE_NODE="$NODE_BIN" \
-	-e HIVE_CLAUDE="$CLAUDE_BIN" -- "$ROOT/bin/main-pane" "$@"
+	-e HIVE_CLAUDE="$CLAUDE_BIN" -e HIVE_IA=claude -e HIVE_MODELO= -- "$ROOT/bin/main-pane" "$@"

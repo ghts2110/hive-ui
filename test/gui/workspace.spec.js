@@ -1,0 +1,161 @@
+import {test, expect} from '@playwright/test';
+import {_electron as electron} from 'playwright';
+import {spawn, execFileSync} from 'node:child_process';
+import {mkdtemp, mkdir, writeFile, rm, realpath} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join, resolve} from 'node:path';
+import {once} from 'node:events';
+
+let servidor;
+let pasta;
+let link;
+let origin;
+let key;
+const root = resolve(import.meta.dirname, '../..');
+
+test.beforeAll(async () => {
+	pasta = await realpath(await mkdtemp(join(tmpdir(), 'hive-gui-test-')));
+	await mkdir(join(pasta, 'bin'));
+	const fake = `#!${process.execPath}
+if (process.argv[2] === '--version') { console.log('9.8.7'); process.exit(); }
+if (process.argv[2] === 'auth') { console.log(JSON.stringify({subscriptionType:'pro'})); process.exit(); }
+if (process.argv[2] === 'app-server') {
+ let rest=''; process.stdin.on('data', data => { rest+=data; let i; while((i=rest.indexOf('\\n'))>=0){const line=rest.slice(0,i);rest=rest.slice(i+1);try{const m=JSON.parse(line);console.log(JSON.stringify({id:m.id,result:m.method==='account/read'?{account:{type:'chatgpt',planType:'plus'}}:{rateLimits:{primary:{windowDurationMins:300,usedPercent:23,resetsAt:1999999999}}}}));}catch{}}});
+} else {
+ console.log('AGENTE DE TESTE · '+process.argv.slice(2).join(' '));
+ if(process.stdin.isTTY) process.stdin.setRawMode(true);
+ process.stdin.on('data', data=>{if(data.includes(4)){process.exit();}process.stdout.write(data);});
+}
+`;
+	for (const agent of ['claude', 'codex']) await writeFile(join(pasta, 'bin', agent), fake, {mode: 0o755});
+	servidor = spawn(process.execPath, [join(root, 'gui/server.js')], {cwd: pasta, env: {...process.env, PATH: `${join(pasta, 'bin')}:${process.env.PATH}`, HIVE_GUI_NO_OPEN: '1', HIVE_GUI_PORT: '0'}, stdio: ['ignore', 'pipe', 'pipe']});
+	let stdout = ''; let stderr = '';
+	servidor.stderr.on('data', data => { stderr += data; });
+	link = await new Promise((resolve, reject) => {
+		const timeout = setTimeout(() => reject(new Error(`Servidor não iniciou: ${stderr}`)), 15000);
+		servidor.once('exit', code => { clearTimeout(timeout); reject(new Error(`Servidor saiu: ${code} ${stderr}`)); });
+		servidor.stdout.on('data', data => { stdout += data; const url = stdout.match(/http:\/\/127\.0\.0\.1:\d+\/#\w+/)?.[0]; if (url) { clearTimeout(timeout); resolve(url); } });
+	});
+	origin = new URL(link).origin; key = new URL(link).hash.slice(1);
+});
+test.afterAll(async () => {
+	if (servidor && servidor.exitCode === null) { const ended = once(servidor, 'exit'); servidor.kill('SIGTERM'); await ended; }
+	if (pasta) await rm(pasta, {recursive: true, force: true});
+});
+
+test('interface gráfica conecta agentes, preserva rascunho e troca modelos', async ({page}) => {
+	const errors = [];
+	page.on('pageerror', error => errors.push(error.message));
+	await page.goto(link);
+	await expect(page.getByText('Conectado localmente')).toBeVisible();
+	await expect(page.getByRole('heading', {name: /Boas ideias/})).toBeVisible();
+	await expect(page.locator('#usage')).toContainText('Claude Code');
+	await page.screenshot({path: join(root, 'docs/gui-inicio.png')});
+	await page.getByRole('button', {name: 'Nova conversa', exact: true}).first().click();
+	await expect(page.getByRole('dialog')).toBeVisible();
+	await expect(page.getByLabel('Pasta do projeto', {exact: true})).toHaveValue(pasta);
+	await page.getByRole('button', {name: 'Iniciar conversa'}).click();
+	await expect(page.locator('#agent-name')).toHaveText('Claude Code');
+	await expect(page.locator('#terminal .xterm-screen')).toContainText('AGENTE DE TESTE');
+	await page.locator('.xterm-helper-textarea').focus(); await page.keyboard.type('rascunho-preservado');
+	await expect(page.locator('#terminal .xterm-screen')).toContainText('rascunho-preservado');
+	await page.getByRole('button', {name: 'Nova conversa', exact: true}).first().click();
+	await page.locator('.agent-choice.codex').click();
+	await page.getByRole('button', {name: 'Iniciar conversa'}).click();
+	await expect(page.locator('#agent-name')).toHaveText('Codex');
+	await expect(page.locator('.conversation-card')).toHaveCount(2);
+	await page.locator('.conversation-card').first().click();
+	await expect(page.locator('#agent-name')).toHaveText('Claude Code');
+	await expect(page.locator('#terminal .xterm-screen')).toContainText('rascunho-preservado');
+	await page.getByRole('button', {name: /MODELO/}).click();
+	await page.getByRole('radio', {name: /Sonnet/}).check();
+	await page.getByRole('button', {name: 'Abrir conversa', exact: true}).click();
+	await expect(page.locator('#model-name')).toHaveText('sonnet');
+	await expect(page.locator('.conversation-card')).toHaveCount(3);
+	await page.screenshot({path: join(root, 'docs/gui-conversa.png')});
+	await page.getByRole('button', {name: 'Nova conversa', exact: true}).first().click();
+	await page.screenshot({path: join(root, 'docs/gui-agentes.png')});
+	await page.keyboard.press('Escape');
+	await page.getByRole('button', {name: 'Fechar conversa', exact: true}).click();
+	await expect(page.getByRole('heading', {name: 'Encerrar esta conversa?'})).toBeVisible();
+	await page.getByRole('button', {name: 'Manter aberta'}).click();
+	await expect(page.locator('.conversation-card')).toHaveCount(3);
+	await page.getByRole('button', {name: 'Fechar conversa', exact: true}).click();
+	await page.getByRole('button', {name: 'Encerrar conversa', exact: true}).click();
+	await expect.poll(async () => (await (await fetch(`${origin}/api/state`, {headers: {Authorization: `Bearer ${key}`}})).json()).conversas.length).toBe(2);
+	await expect(page.locator('.conversation-card')).toHaveCount(2);
+	expect(execFileSync('tmux', ['-L', `hive-gui-${servidor.pid}`, 'list-sessions', '-F', '#{session_name}'], {encoding: 'utf8'})).not.toContain('conversa-3');
+	await page.getByRole('searchbox', {name: 'Buscar conversa'}).fill('não existe');
+	await expect(page.getByText('Nenhuma conversa encontrada.')).toBeVisible();
+	await page.getByRole('searchbox', {name: 'Buscar conversa'}).fill('');
+	await page.reload();
+	await expect(page.locator('.conversation-card')).toHaveCount(2);
+	await page.setViewportSize({width: 800, height: 640});
+	await expect(page.getByRole('button', {name: /MODELO/})).toBeVisible();
+	expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+	expect(errors).toEqual([]);
+});
+
+test('protege comandos locais e rejeita parâmetros inválidos', async ({request, page}) => {
+	expect((await request.get(`${origin}/api/state`)).status()).toBe(401);
+	expect((await request.post(`${origin}/api/conversations`, {headers: {Authorization: `Bearer ${key}`}, data: {agente: 'shell'}})).status()).toBe(400);
+	expect((await request.post(`${origin}/api/conversations`, {headers: {Authorization: `Bearer ${key}`}, data: {agente: 'claude', modelo: 'opus; touch /tmp/invalido'}})).status()).toBe(400);
+	expect((await request.get(`${origin}/api/state`, {headers: {Authorization: `Bearer ${key}`, Origin: 'https://outro-site.example'}})).status()).toBe(403);
+	await page.goto(link);
+	await expect(page.getByText('Conectado localmente')).toBeVisible();
+	await page.getByRole('button', {name: 'Nova conversa', exact: true}).first().click();
+	await page.getByLabel('Pasta do projeto', {exact: true}).fill('/pasta-que-nao-existe-hive');
+	await page.getByRole('button', {name: 'Iniciar conversa'}).click();
+	await expect(page.getByRole('alert').filter({hasText: /pasta existente/})).toBeVisible();
+});
+
+test('hooks atualizam status, modelo e uso; sair do agente encerra somente sua conversa', async ({page}) => {
+	await page.goto(link);
+	await expect(page.locator('.conversation-card')).toHaveCount(2);
+	await page.locator('.conversation-card').first().click();
+	const socket = `hive-gui-${servidor.pid}`;
+	const pane = execFileSync('tmux', ['-L', socket, 'list-panes', '-t', '=conversa-1', '-F', '#{pane_id}'], {encoding: 'utf8'}).trim();
+	const socketPath = execFileSync('tmux', ['-L', socket, 'display-message', '-p', '#{socket_path}'], {encoding: 'utf8'}).trim();
+	const env = {...process.env, TMUX: `${socketPath},0,1`, TMUX_PANE: pane, HIVE_GUI: '1'};
+	execFileSync(process.execPath, [join(root, 'sidebar/status.js'), 'trabalhando'], {env, input: JSON.stringify({hook_event_name: 'UserPromptSubmit', prompt: 'Organiza o projeto'})});
+	expect(execFileSync('tmux', ['-L', socket, 'show-options', '-pqv', '-t', pane, '@status'], {encoding: 'utf8'}).trim()).toBe('trabalhando');
+	await expect(page.locator('#agent-status')).toHaveText('Trabalhando');
+	await expect(page.locator('.conversation-card').first()).toContainText('Organiza o projeto');
+	await expect.poll(async () => (await (await fetch(`${origin}/api/state`, {headers: {Authorization: `Bearer ${key}`}})).json()).conversas.find(c => c.id === 'conversa-1').enviadas).toBe(1);
+	execFileSync(process.execPath, [join(root, 'sidebar/uso.js')], {env, input: JSON.stringify({model: {display_name: 'Sonnet (teste)'}, rate_limits: {five_hour: {used_percentage: 12, resets_at: 1999999999}}, cost: {total_lines_added: 9, total_lines_removed: 2}})});
+	expect(execFileSync('tmux', ['-L', socket, 'show-options', '-pqv', '-t', pane, '@modelo'], {encoding: 'utf8'}).trim()).toBe('Sonnet (teste)');
+	await expect(page.locator('#model-name')).toHaveText('Sonnet (teste)');
+	await expect(page.locator('#usage')).toContainText('12% / 5h');
+	await expect(page.locator('.conversation-card').first()).toContainText('+9');
+	execFileSync(process.execPath, [join(root, 'sidebar/status.js'), 'pronto'], {env, input: '{}'});
+	await expect(page.locator('#agent-status')).toHaveText('Pronto');
+	await page.locator('.xterm-helper-textarea').focus();
+	await page.keyboard.press('Control+d');
+	await expect(page.locator('.conversation-card')).toHaveCount(1);
+	await expect(page.locator('#agent-name')).toHaveText('Codex');
+});
+
+test('a interface abre em uma janela própria e o terminal funciona nela', async () => {
+	const ambiente = {...process.env};
+	delete ambiente.ELECTRON_RUN_AS_NODE;
+	const aplicativo = await electron.launch({args: [join(root, 'gui/window.cjs'), link], env: ambiente});
+	try {
+		const janela = await aplicativo.firstWindow();
+		await expect(janela).toHaveTitle('Hive · seu espaço de trabalho');
+		await expect(janela.getByText('Conectado localmente')).toBeVisible();
+		expect(await aplicativo.evaluate(({BrowserWindow}) => {
+			const janela = BrowserWindow.getAllWindows()[0];
+			const preferencias = janela.webContents.getLastWebPreferences();
+			return {titulo: janela.getTitle(), node: preferencias.nodeIntegration, sandbox: preferencias.sandbox};
+		})).toEqual({titulo: 'Hive', node: false, sandbox: true});
+		await janela.getByRole('button', {name: 'Nova conversa', exact: true}).first().click();
+		await janela.locator('.agent-choice.claude').click();
+		await janela.getByRole('button', {name: 'Iniciar conversa'}).click();
+		await expect(janela.locator('#agent-name')).toHaveText('Claude Code');
+		await expect(janela.locator('#terminal .xterm-screen')).toContainText('AGENTE DE TESTE');
+		await janela.locator('.xterm-helper-textarea').focus();
+		await janela.keyboard.type('janela-local-funcionando');
+		await expect(janela.locator('#terminal .xterm-screen')).toContainText('janela-local-funcionando');
+		await janela.screenshot({path: join(root, 'docs/gui-aplicativo.png')});
+	} finally { await aplicativo.close(); }
+});

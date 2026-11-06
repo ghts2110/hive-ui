@@ -151,6 +151,7 @@ const atalhos = [
 	['p', 'pendente'],
 	['n ctrl+t', 'nova'],
 	['c', 'nova do Codex'],
+	['+ a', 'escolher agente'],
 	['x ctrl+w', 'fechar'],
 	['h', 'esconder'],
 	['< >', 'largura'],
@@ -222,6 +223,8 @@ function Sidebar() {
 	// Conversa do Codex pedida sem ele instalado: como instalar, no lugar
 	// da lista.
 	const [semCodex, setSemCodex] = useState(false);
+	const [novoAgente, setNovoAgente] = useState(null);
+	const [erroNova, setErroNova] = useState('');
 	const [avisoMic, setAvisoMic] = useState(null);
 	const ditando = useRef(null);
 	ditando.current ??= new ditado.Ditado(naTela, novo => {
@@ -229,7 +232,7 @@ function Sidebar() {
 		if (ditado.comoResolver[novo.aviso]) setSemMic(novo.aviso);
 		else if (novo.aviso) setAvisoMic(novo.aviso);
 	});
-	const painel = semVoz || semMic || semCodex;
+	const painel = semVoz || semMic || semCodex || novoAgente !== null;
 	const atualizar = () => {
 		try {
 			setEstado(ler());
@@ -309,7 +312,13 @@ function Sidebar() {
 			const caminho = conv.caminhoCodex();
 			if (!caminho) return setCodex({});
 			setCodex(atual => ({...atual, instalado: true}));
-			plano.ler(caminho, leitura.signal).then(lido => !leitura.signal.aborted && setCodex({...lido, instalado: true}));
+			plano.ler(caminho, leitura.signal).then(lido => {
+				if (leitura.signal.aborted) return;
+				setCodex({...lido, instalado: true});
+				try {
+					tmux('set', '-q', '@plano_codex', lido.plano ? `ChatGPT ${lido.plano}` : lido.conta === 'apiKey' ? 'API' : '');
+				} catch {}
+			});
 		};
 		buscar();
 		const intervalo = setInterval(buscar, 5 * 60 * 1000);
@@ -478,6 +487,21 @@ function Sidebar() {
 	};
 
 	const abrir = id => agir(() => conv.abrir(sidebar, id));
+	const escolherAgente = () => {
+		setAjuda(false); setSemVoz(false); setSemMic(null); setSemCodex(false);
+		setConfirmar(null); setErroNova(''); setNovoAgente(0);
+	};
+	const criarComAgente = indice => {
+		try {
+			const ia = indice === 1 ? 'codex' : 'claude';
+			if (ia === 'codex' && !conv.temCodex()) {
+				setErroNova('Codex não encontrado.'); return;
+			}
+			setCursor(conv.nova(sidebar, ia));
+			setNovoAgente(null); setErroNova('');
+		} catch { setErroNova('Falha ao abrir. Tente de novo.'); }
+		atualizar();
+	};
 
 	// Só cabem algumas conversas: mostra a fatia em volta do cursor. Fora o
 	// título, os anéis e o rodapé, sobram linhas para elas, menos uma para o
@@ -504,6 +528,15 @@ function Sidebar() {
 		return Object.keys(usos)[Math.floor((linha - topoAnel) / anel.linhas)] ?? null;
 	};
 	function mouse(botao, linha, coluna) {
+		if (botao === 0 && linha === 1 && coluna >= colunas - 5 && coluna <= colunas - 1) {
+			if (novoAgente !== null) setNovoAgente(null);
+			else escolherAgente();
+			return;
+		}
+		if (novoAgente !== null) {
+			if (botao === 0 && linha >= 4 && linha <= 7) criarComAgente(linha <= 5 ? 0 : 1);
+			return;
+		}
 		// Movimento com shift, alt ou ctrl soma 4, 8 ou 16 ao botão.
 		if ((botao & ~28) === 35) {
 			setSobreAnel(noAnel(linha, coluna));
@@ -536,6 +569,13 @@ function Sidebar() {
 			return;
 		}
 
+		if (novoAgente !== null) {
+			if (key.escape || input === '+') { setNovoAgente(null); setErroNova(''); }
+			else if (key.upArrow || key.downArrow || key.tab) setNovoAgente(n => 1 - n);
+			else if (input === '1' || input === '2') criarComAgente(Number(input) - 1);
+			else if (key.return) criarComAgente(novoAgente);
+			return;
+		}
 		if (ajuda) {
 			if (input === '?' || input === 'q' || key.escape) setAjuda(false);
 			return;
@@ -593,7 +633,8 @@ function Sidebar() {
 		} else if (input === 'c') {
 			if (conv.temCodex()) agir(() => setCursor(conv.nova(sidebar, 'codex')));
 			else setSemCodex(true);
-		} else if (input === 'x' && sob) setConfirmar(sob.id);
+		} else if (input === 'a' || input === '+') escolherAgente();
+		else if (input === 'x' && sob) setConfirmar(sob.id);
 		else if (input === 'h') agir(() => conv.esconder(sidebar));
 		else if (input === '<' || input === '>') {
 			agir(() => {
@@ -619,6 +660,7 @@ function Sidebar() {
 	let rodape;
 	if (confirmar) rodape = [h(Text, {key: 1, color: aviso, wrap: 'truncate-end'}, `fechar ${alvo?.titulo}?`), dica(2, ['s', 'sim'], ['n', 'não'])];
 	else if (ajuda) rodape = [dica(1, ['? esc', 'fechar'])];
+	else if (novoAgente !== null) rodape = [dica(1, ['↑↓', 'escolher']), dica(2, ['enter', 'abrir']), dica(3, ['esc', 'cancelar'])];
 	else if (painel) rodape = [dica(1, ['esc', 'fechar'])];
 	else if (focado) rodape = [dica(1, ['↑↓ enter', 'abrir']), dica(2, ['n', 'nova'], ['x', 'fechar']), dica(3, ['?', 'ajuda'], ['esc', 'sai'])];
 	else rodape = [dica(1, ['ctrl+t', 'nova']), dica(2, ['ctrl+w', 'fechar']), dica(3, ['ctrl+\\', 'sidebar'])];
@@ -672,7 +714,7 @@ function Sidebar() {
 			Box,
 			{justifyContent: 'space-between', flexShrink: 0},
 			h(Box, {flexShrink: 1, overflow: 'hidden'}, h(Text, {bold: true, color: focado ? destaque : undefined, wrap: 'truncate-end'}, ajuda ? 'Atalhos' : semVoz ? 'Leitura em voz alta' : semMic ? 'Ditado por voz' : semCodex ? 'Codex' : 'Conversas')),
-			ajuda || painel ? null : contagem,
+			h(Box, {flexShrink: 0}, ajuda || painel ? null : contagem, h(Text, {color: destaque, bold: true}, novoAgente !== null ? ' [×]' : ' [+]')),
 		),
 		h(Box, {height: 1, flexShrink: 0}, !ajuda && !painel && inicio ? seta(1, `↑ ${inicio} acima`) : null),
 		h(
@@ -680,6 +722,16 @@ function Sidebar() {
 			{flexDirection: 'column', flexGrow: 1, overflow: 'hidden'},
 			ajuda
 				? h(Ajuda)
+				: novoAgente !== null
+				? h(Box, {flexDirection: 'column', flexShrink: 0},
+					h(Text, {color: apagado}, 'Escolha o agente'),
+					...['Claude Code', 'Codex'].map((nome, indice) => h(Box, {key: nome, flexDirection: 'column', height: 2},
+						h(Text, {color: novoAgente === indice ? destaque : apagado, bold: novoAgente === indice}, `${novoAgente === indice ? '›' : ' '} ${indice + 1}  ${nome}`),
+						h(Text, {color: apagado, wrap: 'truncate-end'}, indice === 1 && !codex.instalado ? '     requer instalação' : '     nova conversa'),
+					)),
+					h(Text, {color: erroNova ? vermelho : apagado, wrap: 'wrap'}, erroNova || 'Abre na pasta atual.'),
+					erroNova ? h(Text, {color: apagado, wrap: 'wrap'}, 'Instale e faça login com codex login.') : null,
+				)
 				: semVoz
 				? h(Instrucoes, {linhas: voz.comoInstalar})
 				: semMic
