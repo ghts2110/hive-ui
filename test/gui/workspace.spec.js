@@ -22,9 +22,7 @@ if (process.argv[2] === 'auth') { console.log(JSON.stringify({subscriptionType:'
 if (process.argv[2] === 'app-server') {
  let rest=''; process.stdin.on('data', data => { rest+=data; let i; while((i=rest.indexOf('\\n'))>=0){const line=rest.slice(0,i);rest=rest.slice(i+1);try{const m=JSON.parse(line);console.log(JSON.stringify({id:m.id,result:m.method==='account/read'?{account:{type:'chatgpt',planType:'plus'}}:{rateLimits:{primary:{windowDurationMins:300,usedPercent:23,resetsAt:1999999999}}}}));}catch{}}});
 } else {
- console.log('AGENTE DE TESTE · '+process.argv.slice(2).join(' '));
- if(process.stdin.isTTY) process.stdin.setRawMode(true);
- process.stdin.on('data', data=>{if(data.includes(4)){process.exit();}process.stdout.write(data);});
+ require(${JSON.stringify(join(root, 'test/agente-modelo.cjs'))});
 }
 `;
 	for (const agent of ['claude', 'codex']) await writeFile(join(pasta, 'bin', agent), fake, {mode: 0o755});
@@ -69,13 +67,43 @@ test('interface gráfica conecta agentes, preserva rascunho e troca modelos', as
 	await expect(page.locator('#terminal .xterm-screen')).toContainText('rascunho-preservado');
 	await page.getByRole('button', {name: /MODELO/}).click();
 	await page.getByRole('radio', {name: /Sonnet/}).check();
-	await page.getByRole('button', {name: 'Abrir conversa', exact: true}).click();
-	await expect(page.locator('#model-name')).toHaveText('sonnet');
-	await expect(page.locator('.conversation-card')).toHaveCount(3);
+	await page.getByRole('button', {name: 'Trocar modelo', exact: true}).click();
+	await expect(page.locator('#model-dialog')).not.toBeVisible({timeout: 20000});
+	await expect(page.locator('#model-name')).toHaveText('Sonnet 5.5');
+	await expect(page.locator('#terminal .xterm-screen')).toContainText('rascunho-preservado');
+	await expect(page.locator('.conversation-card')).toHaveCount(2);
+	for (const indice of [0, 1]) {
+		await page.locator('.conversation-card').nth(indice).click();
+		const agente = indice === 0 ? 'Claude Code' : 'Codex';
+		await expect(page.locator('#agent-name')).toHaveText(agente);
+		if (indice === 1) {
+			await page.locator('.xterm-helper-textarea').focus();
+			await page.keyboard.type('rascunho-codex');
+			await page.getByRole('button', {name: /MODELO/}).click();
+			await page.locator('#custom-model').fill('gpt-6-astra');
+			await page.getByRole('button', {name: 'Trocar modelo', exact: true}).click();
+			await expect(page.locator('#model-dialog')).not.toBeVisible({timeout: 20000});
+			await expect(page.locator('#model-name')).toHaveText('gpt-6-astra');
+		}
+		const modelo = await page.locator('#model-name').textContent();
+		const panesAntes = execFileSync('tmux', ['-L', `hive-gui-${servidor.pid}`, 'list-panes', '-a', '-F', '#{pane_id} #{pane_pid} #{pane_current_path}'], {encoding: 'utf8'});
+		await page.getByRole('button', {name: /MODELO/}).click();
+		await page.locator('#custom-model').fill('indisponivel');
+		await page.getByRole('button', {name: 'Trocar modelo', exact: true}).click();
+		await expect(page.locator('#model-error')).toContainText('inválido ou indisponível', {timeout: 20000});
+		await page.keyboard.press('Escape');
+		await expect(page.locator('#model-name')).toHaveText(modelo);
+		await expect(page.locator('#terminal .xterm-screen')).toContainText(indice === 0 ? 'rascunho-preservado' : 'rascunho-codex');
+		await expect(page.locator('.conversation-card')).toHaveCount(2);
+		expect(execFileSync('tmux', ['-L', `hive-gui-${servidor.pid}`, 'list-panes', '-a', '-F', '#{pane_id} #{pane_pid} #{pane_current_path}'], {encoding: 'utf8'})).toBe(panesAntes);
+	}
+	await page.locator('.conversation-card').first().click();
 	await page.screenshot({path: join(root, 'docs/gui-conversa.png')});
 	await page.getByRole('button', {name: 'Nova conversa', exact: true}).first().click();
 	await page.screenshot({path: join(root, 'docs/gui-agentes.png')});
 	await page.keyboard.press('Escape');
+	await fetch(`${origin}/api/conversations`, {method: 'POST', headers: {Authorization: `Bearer ${key}`, 'Content-Type': 'application/json'}, body: JSON.stringify({agente: 'claude', pasta})});
+	await expect(page.locator('.conversation-card')).toHaveCount(3);
 	await page.getByRole('button', {name: 'Fechar conversa', exact: true}).click();
 	await expect(page.getByRole('heading', {name: 'Encerrar esta conversa?'})).toBeVisible();
 	await page.getByRole('button', {name: 'Manter aberta'}).click();

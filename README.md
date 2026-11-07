@@ -37,7 +37,7 @@ hive
 
 - O **+** abre a escolha entre Claude Code e Codex, com modelo opcional e pasta de trabalho. Um agente instalado é suficiente para usar este modo.
 - Cada conversa executa o agente real em sua própria sessão tmux. Trocar de cartão preserva o processo, a tela e o rascunho. O terminal integrado aceita texto, atalhos, seleção e permissões como o agente original.
-- O cabeçalho identifica agente, versão do aplicativo, modelo, plano e pasta. O botão de modelo abre outra conversa e mantém a atual. Sem dado do agente, o modelo fica em identificação; aliases não presumem uma versão específica.
+- O cabeçalho identifica agente, versão do aplicativo, modelo, plano e pasta. O botão de modelo troca o modelo na sessão atual, preservando a conversa e o rascunho. Sem dado do agente, o modelo fica em identificação; aliases não presumem uma versão específica.
 - A sidebar oferece busca, status, contadores de alterações, uso dos planos e o botão para ir à próxima conversa pendente. A seta do cabeçalho esconde e mostra a sidebar.
 - **Leitura** e **Ditado** reaproveitam os recursos locais de voz do modo terminal. O ditado preenche o terminal sem enviar a mensagem. Os modelos são baixados apenas ao ligar cada recurso.
 - O ícone de notificações no rodapé da sidebar permite ativar os avisos do aplicativo. Use o ícone de teclado para consultar os atalhos.
@@ -50,7 +50,7 @@ O launcher aguarda a confirmação de abertura da janela e informa falhas de ini
 
 Para desenvolvimento, `npm run gui:web` permite abrir a mesma interface no navegador; esse modo não é usado pelo comando `hive`.
 
-Testes: `npm run test:gui` executa o Chromium e a janela Electron com agentes falsos, verificando conversas, rascunho, modelos, hooks, busca e encerramento. `npm run test:launcher` verifica o comando padrão e seus aliases. Na primeira execução de desenvolvimento, instale o navegador com `npx playwright install chromium`. `npm test` verifica o modo terminal.
+Testes: `npm run test:gui` executa o Chromium e a janela Electron com agentes falsos, verificando conversas, rascunho, modelos, hooks, busca e encerramento. `npm run test:launcher` verifica o comando padrão e seus aliases. Na primeira execução de desenvolvimento, instale o navegador com `npx playwright install chromium`. `npm test` verifica o modo terminal. `npm run test:modelo` verifica as regras da troca e o cabeçalho real em sessões tmux isoladas.
 
 ## Instalação
 
@@ -173,9 +173,11 @@ O botão **[+]** ao lado de “Conversas”, na barra lateral, abre as opções 
 
 O cabeçalho separa a versão do aplicativo (ao lado do nome do agente) do modelo em uso, exibido na segunda linha. Sem informação do agente, mostra “aguardando identificação…” em vez de presumir um modelo ou uma versão.
 
-Clique no botão **[ Trocar modelo ▾ ]**, à direita do cabeçalho, para abrir as opções. Pelo teclado, use `Ctrl-]` e `m`. No Claude, escolha Padrão, Opus, Sonnet, Haiku ou Outro ID; no Codex, Padrão, o modelo identificado ou Outro ID. As opções são aliases, sem presumir versões específicas ou disponibilidade na conta. Use `←`/`→`, `Enter` ou clique; `i` permite informar o ID diretamente e `Esc` cancela.
+Clique no botão **[ Trocar modelo ▾ ]**, à direita do cabeçalho, para abrir as opções. Pelo teclado, use `Ctrl-]` e `m`. No Claude, escolha Padrão, Opus, Sonnet, Haiku ou Outro ID; no Codex, o modelo identificado ou Outro ID. As opções são aliases, sem presumir versões específicas ou disponibilidade na conta. Use `←`/`→`, `Enter` ou clique; `i` permite informar o ID diretamente e `Esc` cancela.
 
-Confirmar um modelo abre **uma nova conversa na mesma pasta**, preservando a anterior com seu processo, histórico e rascunho. O seletor informa esse comportamento antes da confirmação. O modelo escolhido vale apenas para a nova conversa; sua disponibilidade é validada pelo próprio agente. Nenhuma configuração global é alterada.
+Confirmar troca o modelo **na mesma conversa e sessão**, preservando histórico, título, pasta e rascunho. Aguarde a resposta ou resolva a interação pendente antes de trocar. O cabeçalho só muda após a confirmação do agente; falhas aparecem no seletor, sem abrir outra conversa. No Codex, informe o ID para escolher outro modelo.
+
+A integração usa `/model` e o editor externo nativo (`Ctrl-G`) para guardar e restaurar o texto completo do rascunho. Requer Claude Code **2.1.311+** ou Codex CLI **0.167.0+**; o fluxo foi validado nessas versões. Mantenha o atalho nativo de editor externo disponível. Fora da troca, o editor configurado em `VISUAL`/`EDITOR` continua funcionando. O Codex aplica a escolha apenas à sessão. O Claude Code 2.1.311 também salva a escolha como padrão para sessões futuras, conforme informa o próprio agente. Se o agente fechar durante a restauração, a mensagem de erro indica o arquivo temporário com o rascunho recuperável.
 
 ### Uso do plano
 

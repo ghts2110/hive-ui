@@ -17,6 +17,7 @@
     "sidebar": "node sidebar/index.js",
     "test": "sh test/launcher.test.sh",
     "test:gui": "playwright test",
+    "test:modelo": "node --test test/modelo.test.js test/terminal-modelo.test.js",
     "test:launcher": "node --test test/desktop-launcher.test.js test/desktop-lifecycle.test.js"
   },
   "dependencies": {

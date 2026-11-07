@@ -13,7 +13,13 @@ ia=${HIVE_IA:-claude}
 # o nome dela.
 [ "$ia" = codex ] && printf '\033]2;\033\\'
 tmux set -p -t "$TMUX_PANE" @ia "$ia"
-# O modelo escolhido no cabeçalho vale só para esta conversa.
+# O editor recebe o rascunho inteiro durante uma troca de modelo. Fora dela,
+# a ponte encaminha a edição ao editor configurado pelo usuário.
+export HIVE_EDITOR_ORIGINAL="${VISUAL:-${EDITOR:-vi}}"
+export EDITOR="$HIVE_ROOT/bin/editor"
+export VISUAL="$EDITOR"
+tmux set -p -t "$TMUX_PANE" @modelo_bridge 1
+# O modelo escolhido ao criar a conversa é passado na chamada inicial.
 if [ -n "$HIVE_MODELO" ]; then
 	set -- --model "$HIVE_MODELO" "$@"
 	tmux set -p -t "$TMUX_PANE" @modelo "$HIVE_MODELO"
@@ -49,10 +55,12 @@ if [ "$ia" = codex ]; then
 		echo "Codex não encontrado no PATH." >&2
 		status=127
 	else
+		tmux set -p -t "$TMUX_PANE" @agente_versao "$("$codex" --version 2>/dev/null)"
 		"$codex" --no-daemon -c 'tui.terminal_title=["thread-name"]' "$@"
 		status=$?
 	fi
 else
+	tmux set -p -t "$TMUX_PANE" @agente_versao "$("$HIVE_CLAUDE" --version 2>/dev/null)"
 	"$HIVE_CLAUDE" --settings "$HIVE_ROOT/sidebar/hooks.json" "$@"
 	status=$?
 fi

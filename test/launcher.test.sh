@@ -37,6 +37,7 @@ esac
 [ -n "\$FAKE_LOGO" ] && printf ' ▐▛█  Claude Code v9.9.9\n▝▜██  Modelo · Claude Max\n ▝▝   ~/projeto\n'
 printf '%s\n' "\$@" > "$TMP/args"
 echo "HIVE=\$HIVE" > "$TMP/env"
+[ "\$HIVE_TEST_MODELO" = 1 ] && exec "\$HIVE_NODE" "$ROOT/test/agente-modelo.cjs" "\$@"
 trap 'kill \$!; exit 0' TERM
 sleep "\${FAKE_SLEEP:-0}" & wait \$!
 FAKE
@@ -62,6 +63,7 @@ if [ "\$1" = app-server ]; then
 fi
 printf '%s\n' "\$@" > "$TMP/codex-args"
 echo "HIVE_IA=\$HIVE_IA" > "$TMP/codex-env"
+[ "\$HIVE_TEST_MODELO" = 1 ] && exec "\$HIVE_NODE" "$ROOT/test/agente-modelo.cjs" "\$@"
 trap 'exit 0' TERM
 while :; do sleep 1; done
 FAKE
@@ -588,6 +590,7 @@ T kill-server 2>/dev/null; wait "$PID" 2>/dev/null
 # Conversa do Codex pelo c do sidebar: hooks de status por -c, cada um com
 # o hash que o Codex confere (ver sidebar/codex.js), sem o cabeçalho do
 # Claude Code; o nome que o Codex põe no título do terminal vira o título.
+export HIVE_TEST_MODELO=1
 abrir 90
 sb=$(T show -v @sidebar)
 cab=$(T show -v @cabecalho)
@@ -609,14 +612,14 @@ sleep 1
 item "○ nova conversa" >/dev/null && ok "codex sem nome tem título provisório" || falha "título codex: $(T capture-pane -p -t "$sb")"
 T select-pane -t "$codex" -T "Revisa o parser"; sleep 1.5
 item "Revisa o parser" >/dev/null && ok "nome do codex vira o título" || falha "nome codex: $(T capture-pane -p -t "$sb")"
-# Modelo escolhido vai para uma nova conversa e preserva o pane anterior.
+# Modelo escolhido mantém a conversa, o processo e o rascunho.
 T select-pane -t "$cab"; sleep 0.6
 T send-keys -t "$cab" m; sleep 0.3
 T send-keys -t "$cab" i; sleep 0.3
 T send-keys -t "$cab" -l 'modelo-teste'; T send-keys -t "$cab" Enter; sleep 2
 novo=$(T list-panes -t "$sb" -F '#{pane_id} #{@conversa}' | awk '$2 { print $1 }')
-[ "$(conversas)" = "1 2 3 " ] && [ "$novo" != "$codex" ] && [ "$(T show -pv -t "$novo" @modelo)" = modelo-teste ] && grep -qx 'modelo-teste' "$TMP/codex-args" \
-	&& ok "modelo abre nova conversa do mesmo agente e preserva a anterior" || falha "modelo: $(conversas)/$(cat "$TMP/codex-args")"
+[ "$(conversas)" = "1 2 " ] && [ "$novo" = "$codex" ] && [ "$(T show -pv -t "$novo" @modelo)" = modelo-teste ] \
+	&& ok "modelo mantém a conversa do mesmo agente" || falha "modelo: $(conversas)/$(cat "$TMP/codex-args")"
 # Botão + na sidebar abre o seletor; cancelar não cria panes.
 T select-pane -t "$sb"; sleep 0.6
 T capture-pane -p -t "$sb" | head -1 | grep -q '\[+\]' \
@@ -625,10 +628,10 @@ T send-keys -t "$sb" -l "$(printf '\033[<0;22;1M')"; sleep 0.3
 T capture-pane -p -t "$sb" | grep -q 'Escolha o agente' \
 	&& ok "clique no + abre agentes" || falha "seletor não abriu"
 T send-keys -t "$sb" Escape; sleep 0.5
-[ "$(conversas)" = "1 2 3 " ] && ok "cancelar seleção preserva as conversas" || falha "cancelar agente"
+[ "$(conversas)" = "1 2 " ] && ok "cancelar seleção preserva as conversas" || falha "cancelar agente"
 tecla +
 T send-keys -t "$sb" -l "$(printf '\033[<0;8;4M')"; sleep 2
-[ "$(conversas)" = "1 2 3 4 " ] && T capture-pane -p -t "$cab" | grep -q 'Claude Code' && ! grep -q 'modelo-teste' "$TMP/args" \
+[ "$(conversas)" = "1 2 3 " ] && T capture-pane -p -t "$cab" | grep -q 'Claude Code' && ! grep -q 'modelo-teste' "$TMP/args" \
 	&& ok "escolher agente preserva conversa e não herda modelo do Codex" || falha "trocar agente: $(conversas)"
 # Mouse só abre o modelo sobre o botão, nunca sobre a identidade.
 T select-pane -t "$cab"; sleep 0.6
@@ -638,10 +641,11 @@ T capture-pane -p -t "$cab" | grep -q 'Trocar modelo' \
 T send-keys -t "$cab" m; sleep 0.3
 T send-keys -t "$cab" Right; T send-keys -t "$cab" Enter; sleep 2
 novo=$(T list-panes -t "$sb" -F '#{pane_id} #{@conversa}' | awk '$2 { print $1 }')
-[ "$(conversas)" = "1 2 3 4 5 " ] && [ "$(T show -pv -t "$novo" @modelo)" = opus ] \
+[ "$(conversas)" = "1 2 3 " ] && T capture-pane -p -t "$novo" | grep -q "Opus 5.5" \
 	&& ok "lista de modelos abre seleção e preserva histórico" || falha "modelo selecionado"
 T kill-server 2>/dev/null; wait "$PID" 2>/dev/null
 
+unset HIVE_TEST_MODELO
 # Sem o Codex instalado: o c diz como instalar. Só o node no PATH, além do
 # sistema e do claude falso.
 mkdir -p "$TMP/sem-codex"

@@ -1,9 +1,10 @@
-// Cabeçalho da conversa na tela. O botão de modelo abre outra conversa;
+// Cabeçalho da conversa na tela. O botão de modelo altera a sessão ativa;
 // o seletor de agentes fica no + da sidebar.
 import React, {useEffect, useState} from 'react';
 import {render, Box, Text, useInput, useStdout} from 'ink';
 import {execFileSync} from 'node:child_process';
-import {naTela, tmux, nova, caminhoCodex} from './conversas.js';
+import {naTela, tmux, caminhoCodex} from './conversas.js';
+import {trocarModelo, detectarModelo} from './modelo.js';
 
 const h = React.createElement;
 const apagado = '#6b7280';
@@ -37,8 +38,7 @@ function ler() {
 	// Lê o modelo que a própria TUI informa, sem presumir qual é o padrão.
 	// A statusline do Claude também o publica em @modelo, inclusive após /model.
 	const tela = tmux('capture-pane', '-p', '-t', id, '-S', '-100');
-	const modelo = ia === 'codex' ? [...tela.matchAll(/^\s*[│┃]?\s*model:\s*([^\s│]+).*$/gmi)].at(-1)?.[1]
-		: tela.match(/(?:^|\n)[^\n]*?\s((?:Opus|Sonnet|Haiku)[^\n·]*?)\s*·/)?.[1];
+	const modelo = detectarModelo(tela, ia);
 	if (modelo) modelos.set(id, modelo);
 	for (const pane of modelos.keys()) {
 		// Limita o cache sem ler todos os panes a cada intervalo.
@@ -63,6 +63,7 @@ function Cabecalho() {
 	const [opcao, setOpcao] = useState(0);
 	const [modelo, setModelo] = useState('');
 	const [erro, setErro] = useState('');
+	const [trocando, setTrocando] = useState(false);
 	useEffect(() => {
 		let anterior;
 		const atualizar = () => {
@@ -95,21 +96,24 @@ function Cabecalho() {
 		if (estado.id) tmux('select-pane', '-t', estado.id);
 	};
 	const opcoes = estado.ia === 'codex'
-		? [{nome: 'Padrão', id: ''}, ...(estado.modelo ? [{nome: estado.modelo, id: estado.modelo}] : []), {nome: 'Outro ID…', id: null}]
+		? [...(estado.modelo ? [{nome: estado.modelo, id: estado.modelo}] : []), {nome: 'Outro ID…', id: null}]
 		: [{nome: 'Padrão', id: ''}, {nome: 'Opus', id: 'opus'}, {nome: 'Sonnet', id: 'sonnet'}, {nome: 'Haiku', id: 'haiku'}, {nome: 'Outro ID…', id: null}];
 	const escolher = () => { setOpcao(0); setModelo(''); setErro(''); setMenu('lista'); };
-	const criar = escolhido => {
+	const trocar = async escolhido => {
+		if (trocando) return;
+		setTrocando(true);
 		try {
-			nova(estado.sidebar, estado.ia, escolhido);
+			await trocarModelo({pane: estado.id, agente: estado.ia, modelo: escolhido, tmux});
 			setMenu(null); setErro('');
-		} catch (erro) { setErro(erro.message || 'Não foi possível abrir a conversa.'); }
+		} catch (erro) { setErro(erro.message || 'Não foi possível trocar o modelo.'); }
+		finally { setTrocando(false); }
 	};
 	const selecionar = indice => {
 		const item = opcoes[indice];
 		if (!item) return;
 		setOpcao(indice);
 		if (item.id === null) { setMenu('modelo'); setModelo(''); }
-		else criar(item.id);
+		else trocar(item.id);
 	};
 	const botao = '[ Trocar modelo ▾ ]';
 	const inicioBotao = Math.max(1, largura - botao.length);
@@ -121,6 +125,7 @@ function Cabecalho() {
 		return {inicio, fim: colunaOpcao - 1, texto, indice};
 	});
 	useInput((input, key) => {
+		if (trocando) return;
 		try {
 			const eventos = [...input.matchAll(/\[<(\d+);(\d+);(\d+)([Mm])/g)];
 			if (eventos.length) {
@@ -136,7 +141,7 @@ function Cabecalho() {
 			}
 			if (key.escape || (key.ctrl && input === 'c')) return voltar();
 			if (menu === 'modelo') {
-				if (key.return) return criar(modelo.trim());
+				if (key.return) return trocar(modelo.trim());
 				if (key.backspace || key.delete) setModelo(m => m.slice(0, -1));
 				else if (!key.ctrl && !key.meta) setModelo(m => (m + input.replace(/[^a-zA-Z0-9._:/\[\]-]/g, '')).slice(0, 200));
 				return;
@@ -153,17 +158,17 @@ function Cabecalho() {
 	const linha = (key, texto, props = {}) => h(Text, {key, wrap: 'truncate-end', ...props}, texto);
 	let linhas;
 	if (menu === 'lista') linhas = [
-		linha(1, ` Modelo · ${agente.nome} · abrir em nova conversa`, {color: destaque, bold: true}),
+		linha(1, ` Trocar modelo · ${agente.nome}`, {color: destaque, bold: true}),
 		h(Box, {key: 2, paddingLeft: 1, overflow: 'hidden'}, regioes.map(({texto, indice}) => h(Text, {
 			key: indice, color: indice === opcao ? '#ffffff' : apagado,
 			backgroundColor: indice === opcao ? destaque : undefined, bold: indice === opcao,
 		}, texto + ' '))),
-		linha(3, erro || ' ← → escolher · enter abrir · i informar ID · esc cancelar', {color: erro ? '#dc2626' : apagado}),
+		linha(3, erro || (trocando ? ' Trocando modelo…' : ' ← → escolher · enter trocar · i informar ID · esc cancelar'), {color: erro ? '#dc2626' : apagado}),
 	];
 	else if (menu === 'modelo') linhas = [
-		linha(1, ` Modelo · ${agente.nome} · nova conversa`, {color: destaque, bold: true}),
+		linha(1, ` Trocar modelo · ${agente.nome}`, {color: destaque, bold: true}),
 		linha(2, ` ID: ${modelo}▏`, {color: destaque}),
-		linha(3, erro || ' enter abrir · vazio usa padrão · esc cancelar', {color: erro ? '#dc2626' : apagado}),
+		linha(3, erro || (trocando ? ' Trocando modelo…' : ' enter trocar · vazio usa padrão · esc cancelar'), {color: erro ? '#dc2626' : apagado}),
 	];
 	else linhas = [
 		h(Box, {key: 1, justifyContent: 'space-between', paddingX: 1},
