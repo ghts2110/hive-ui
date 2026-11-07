@@ -191,7 +191,7 @@ function openCreate() {
     radio.addEventListener('change', () => { selectedAgent = a.id; createOptions(); $('create-error').textContent = a.instalado ? '' : `${a.nome} não encontrado. Instale e faça login pelo terminal.`; });
     $('agent-choices').append(label);
   }
-  createOptions(); $('create-dialog').showModal();
+  createOptions(); $('create-dialog').showModal(); $('create-submit').focus();
 }
 function openModel() {
   const c = current(); if (!c) return;
@@ -233,7 +233,7 @@ $('toggle-sidebar').onclick = () => { document.body.classList.toggle('sidebar-hi
 $('terminal-focus').onclick = () => terminal?.focus();
 $('voice-button').onclick = () => action('voz'); $('mic-button').onclick = () => action('ditado');
 $('dismiss-notice').onclick = () => action('aviso');
-function askClose() { if (!current()) return; closingId = current().id; $('close-dialog').showModal(); }
+function askClose() { if (!current()) return; closingId = current().id; $('close-dialog').showModal(); $('confirm-close').focus(); }
 function stepConversation(step) {
   const list = state?.conversas; if (!list || list.length < 2) return;
   const i = list.findIndex(c => c.id === state.ativa);
@@ -248,18 +248,14 @@ document.querySelectorAll('dialog').forEach(dialog => {
 });
 function handleShortcut(event) {
   if (event.type !== 'keydown' || event.repeat || document.querySelector('dialog[open]')) return false;
-  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); document.body.classList.remove('sidebar-hidden'); $('search').focus(); return true; }
-  if (event.ctrlKey && event.key.toLowerCase() === 't') { event.preventDefault(); openCreate(); return true; }
-  if (event.ctrlKey && event.key.toLowerCase() === 'q') { event.preventDefault(); action('ditado'); return true; }
-  if (event.ctrlKey && event.key === ']') { event.preventDefault(); openModel(); return true; }
   const alt = event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
   const campo = event.target.closest?.('input, textarea') && !event.target.closest('.xterm');
+  if ((event.ctrlKey && event.key.toLowerCase() === 't') || (alt && event.code === 'KeyT')) { event.preventDefault(); openCreate(); return true; }
+  if (event.ctrlKey && event.key.toLowerCase() === 'q') { event.preventDefault(); action('ditado'); return true; }
   // Com Alt, o macOS troca event.key por outro caractere: as letras usam event.code.
   if ((event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey && event.key.toLowerCase() === 'w') || (alt && event.code === 'KeyW')) { event.preventDefault(); askClose(); return true; }
   if (alt && event.code === 'KeyV') { event.preventDefault(); action('voz'); return true; }
-  if (alt && !campo && event.key === 'ArrowLeft') { event.preventDefault(); action('anterior'); return true; }
   if (alt && !campo && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) { event.preventDefault(); stepConversation(event.key === 'ArrowDown' ? 1 : -1); return true; }
-  if (alt && event.code === 'KeyP') { event.preventDefault(); action('pendente'); return true; }
   if (event.key === 'Escape') action('calar');
   return false;
 }

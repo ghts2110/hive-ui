@@ -147,7 +147,7 @@ const atalhos = [
 	['g G', 'início, fim'],
 	['enter', 'abrir'],
 	['1-9', 'abrir a nº'],
-	['tab alt+←', 'última usada'],
+	['tab', 'anterior'],
 	['alt+↑ alt+↓', 'anterior, próxima'],
 	['p', 'pendente'],
 	['n ctrl+t', 'nova'],

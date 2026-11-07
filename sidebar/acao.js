@@ -1,12 +1,12 @@
 // Atalhos do tmux (ver bin/main-pane):
-// `acao.js nova|fechar|ditar|proxima|anterior|ultima <sidebar>`.
-import {abrir, anterior as ultima, fechar, naTela, nova, tmux, vizinha} from './conversas.js';
+// `acao.js nova|fechar|ditar|proxima|anterior <sidebar>`.
+import {abrir, fechar, naTela, nova, tmux, vizinha} from './conversas.js';
 
 const [acao, sidebar] = process.argv.slice(2);
 if (acao === 'nova') nova(sidebar);
-else if (acao === 'proxima' || acao === 'anterior' || acao === 'ultima') {
+else if (acao === 'proxima' || acao === 'anterior') {
 	// Troca sem tirar o foco de onde estava: o rascunho fica no pane de cada conversa.
-	const id = acao === 'ultima' ? ultima(sidebar) : vizinha(sidebar, acao === 'proxima' ? 1 : -1);
+	const id = vizinha(sidebar, acao === 'proxima' ? 1 : -1);
 	if (id) {
 		const foco = tmux('display', '-p', '-t', sidebar, '#{pane_active}') === '1';
 		abrir(sidebar, id);

@@ -217,22 +217,18 @@ O ícone de teclado na sidebar lista os atalhos. Valem com o foco no terminal in
 
 | Tecla | Ação |
 | --- | --- |
-| `Ctrl-T` | conversa nova |
-| `Ctrl-W` ou `Alt-W` | fecha a conversa (sempre pede confirmação; não fecha a janela) |
-| `⌘ K` / `Ctrl-K` | busca nas conversas |
+| `Ctrl-T` ou `Alt-T` | abre a conversa nova; `Enter` já cria (`Tab` troca pasta e agente antes) |
+| `Ctrl-W` ou `Alt-W` | pede para fechar a conversa; `Enter` confirma, `Esc` cancela (não fecha a janela) |
 | `Alt-↑` / `Alt-↓` | conversa anterior / próxima da lista (dá a volta nas pontas) |
-| `Alt-←` | volta à última conversa usada |
-| `Alt-P` | próxima pendente |
 | `Ctrl-Q` | liga / desliga o ditado (nada é enviado sozinho) |
 | `Alt-V` | liga / desliga a leitura em voz alta |
 | `Esc` | interrompe o agente e cala a leitura (chega ao agente) |
-| `Ctrl-]` | escolhe o modelo |
 
 Num navegador comum, `Ctrl-W` é reservado e fecha a aba: use `Alt-W`. No aplicativo próprio, os dois funcionam.
 
 ### Terminal (`hive --terminal`)
 
-No Terminal.app, `Alt-↑`/`↓`/`←` pedem **Ajustes → Perfis → Teclado → Usar Option como tecla Meta**. `Alt-←` deixa de pular palavra no prompt do agente. A leitura em voz alta só tem atalho com o sidebar focado (`v`).
+No Terminal.app, `Alt-↑`/`↓` pedem **Ajustes → Perfis → Teclado → Usar Option como tecla Meta**. A leitura em voz alta só tem atalho com o sidebar focado (`v`).
 
 ![Tela de ajuda do sidebar com todos os atalhos](docs/ajuda.png)
 
@@ -243,7 +239,6 @@ No Terminal.app, `Alt-↑`/`↓`/`←` pedem **Ajustes → Perfis → Teclado �
 | `Ctrl-W` | qualquer lugar | fecha a conversa da tela (confirma com `s`) |
 | `Ctrl-Q` | qualquer lugar | liga / desliga o ditado por voz |
 | `Alt-↑` / `Alt-↓` | qualquer lugar | passa para a conversa anterior / próxima da lista (dá a volta nas pontas) |
-| `Alt-←` | qualquer lugar | volta à última conversa que esteve na tela |
 | `Esc`, `Ctrl-C` | qualquer lugar | calam a fala em andamento (e chegam ao Claude Code como sempre) |
 | `↑`/`↓`, `j`/`k` | sidebar | escolhe a conversa |
 | `g`/`G` | sidebar | vai ao início e ao fim |
@@ -263,7 +258,7 @@ No Terminal.app, `Alt-↑`/`↓`/`←` pedem **Ajustes → Perfis → Teclado �
 | `?` | sidebar | mostra os atalhos (`?`, `q` ou `Esc` fecham) |
 | `Esc` | sidebar | volta para a conversa |
 
-Fora `Ctrl-\`, `Ctrl-T`, `Ctrl-W`, `Ctrl-Q` e `Alt-←`/`↑`/`↓` (e `Esc`/`Ctrl-C`, que calam a fala e seguem chegando ao Claude Code), os atalhos só valem com o sidebar focado, então os do Claude Code continuam chegando a ele. Esses deixam de chegar ao Claude Code dentro da interface (o `Ctrl-W` não apaga mais a palavra anterior no prompt). O prefixo do tmux fica desligado (`Ctrl-b` chega ao Claude Code) e `Ctrl-Z` fica desativado: suspenderia o claude sem um shell para trazê-lo de volta.
+Fora `Ctrl-\`, `Ctrl-T`, `Ctrl-W`, `Ctrl-Q` e `Alt-↑`/`↓` (e `Esc`/`Ctrl-C`, que calam a fala e seguem chegando ao Claude Code), os atalhos só valem com o sidebar focado, então os do Claude Code continuam chegando a ele. Esses deixam de chegar ao Claude Code dentro da interface (o `Ctrl-W` não apaga mais a palavra anterior no prompt). O prefixo do tmux fica desligado (`Ctrl-b` chega ao Claude Code) e `Ctrl-Z` fica desativado: suspenderia o claude sem um shell para trazê-lo de volta.
 
 ## Claude Code puro
 

@@ -32,13 +32,12 @@ tmux bind -n MouseDragEnd1Pane "$guardar ; $aplicar ; send -M"
 
 # Ctrl-T abre uma conversa nova e Ctrl-W fecha a da tela, de qualquer pane;
 # Ctrl-Q liga e desliga o ditado por voz. Alt-↑/↓ passam para a conversa
-# anterior/próxima da lista e Alt-← volta à última que esteve na tela.
+# anterior/próxima da lista.
 acao="$HIVE_NODE $HIVE_ROOT/sidebar/acao.js"
 tmux bind -n C-t run-shell -b "$acao nova $sidebar"
 tmux bind -n C-q run-shell -b "$acao ditar $sidebar"
 tmux bind -n M-Up run-shell -b "$acao anterior $sidebar"
 tmux bind -n M-Down run-shell -b "$acao proxima $sidebar"
-tmux bind -n M-Left run-shell -b "$acao ultima $sidebar"
 tmux bind -n 'C-]' select-pane -t "$cabecalho"
 tmux bind -n C-w confirm-before -b -c s -p "fechar a conversa da tela? (s/n)" \
 	"run-shell -b '$acao fechar $sidebar'"
