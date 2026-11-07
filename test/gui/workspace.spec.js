@@ -46,7 +46,7 @@ test('interface gráfica conecta agentes, preserva rascunho e troca modelos', as
 	page.on('pageerror', error => errors.push(error.message));
 	await page.goto(link);
 	await expect(page.getByText('Conectado localmente')).toBeVisible();
-	await expect(page.getByRole('heading', {name: /Boas ideias/})).toBeVisible();
+	await expect(page.getByRole('heading', {name: 'Nenhuma conversa aberta'})).toBeVisible();
 	await expect(page.locator('#usage')).toContainText('Claude Code');
 	await page.screenshot({path: join(root, 'docs/gui-inicio.png')});
 	await page.getByRole('button', {name: 'Nova conversa', exact: true}).first().click();
