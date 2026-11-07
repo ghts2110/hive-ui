@@ -85,7 +85,7 @@ function renderList() {
   $('conversation-count').textContent = state.conversas.length;
   $('pending-count').textContent = state.conversas.filter(c => c.status === 'esperando' || (c.novo && c.id !== state.ativa)).length;
 }
-let usageOpen = null;
+let usageOpen = null; let usageDismissed = null;
 function resetText(seconds) {
   const date = new Date(seconds * 1000); const now = new Date(); const left = Math.max(0, Math.round((date - now) / 60000));
   const day = date.toDateString() === now.toDateString() ? 'hoje' : date.toLocaleDateString('pt-BR', {weekday: 'short', day: '2-digit', month: '2-digit'});
@@ -103,22 +103,27 @@ function renderUsage() {
   const focused = document.activeElement?.closest?.('.usage-row')?.dataset.agent; const now = Date.now() / 1000;
   $('usage').replaceChildren();
   for (const a of state.agentes.filter(a => a.instalado)) {
-    const row = el('button', `usage-row ${a.id}`); const title = el('div', 'usage-title'); row.type = 'button'; row.dataset.agent = a.id;
-    const parts = (a.uso || '').split(' ').map(Number); const five = usageWindow(parts[0], parts[1], 'Janela de 5h', now); const known = Boolean(five);
-    title.append(glyph(a.id), el('strong', '', a.nome), el('span', '', known ? `${Math.round(parts[0])}% / 5h` : 'Uso indisponível'));
+    const row = el('div', `usage-row ${a.id}`); row.dataset.agent = a.id; const trigger = el('button', 'usage-trigger'); trigger.type = 'button'; const title = el('div', 'usage-title');
+    const parts = (a.uso || '').split(' ').map(Number); const five = usageWindow(parts[0], parts[1], 'Janela de 5h', now); const week = usageWindow(parts[2], parts[3], 'Janela semanal', now); const known = Boolean(five);
+    title.append(glyph(a.id), el('strong', '', a.nome), el('span', '', known ? `${Math.round(parts[0])}% / 5h` : week ? `${Math.round(parts[2])}% / 7d` : 'Uso indisponível'));
     const track = el('div', 'usage-track'); const fill = el('div', 'usage-fill'); fill.style.width = known ? `${Math.max(0, Math.min(100, parts[0]))}%` : '0%'; track.append(fill);
     const tip = el('div', 'usage-tip'); tip.id = `usage-tip-${a.id}`; tip.setAttribute('role', 'tooltip'); tip.append(el('h3', '', `${a.nome}${a.plano ? ` · ${a.plano}` : ''}`));
-    if (known) {
-      tip.append(five); const week = usageWindow(parts[2], parts[3], 'Janela semanal', now); if (week) tip.append(week);
+    if (known || week) {
+      tip.append(five || el('div', 'usage-window', 'Janela de 5h: sem dado atual (já renovou)')); tip.append(week || el('div', 'usage-window', 'Janela semanal: indisponível'));
       tip.append(el('p', '', 'É a renovação do limite de uso, não a cobrança da assinatura. Atualiza quando o agente responde.'));
     } else tip.append(el('p', '', a.id === 'claude' ? 'Sem dado de uso: ele chega quando uma conversa do Hive recebe resposta, e não existe com login por API.' : 'Sem dado de uso do plano. Ele só existe com login pelo ChatGPT.'));
-    const open = usageOpen === a.id; row.classList.toggle('open', open); row.setAttribute('aria-expanded', String(open)); row.setAttribute('aria-describedby', tip.id);
-    row.addEventListener('click', () => { usageOpen = usageOpen === a.id ? null : a.id; renderUsage(); $('usage').querySelector(`[data-agent="${a.id}"]`).focus(); });
-    row.addEventListener('keydown', event => { if (event.key === 'Escape' && usageOpen) { usageOpen = null; renderUsage(); $('usage').querySelector(`[data-agent="${a.id}"]`).focus(); } });
-    row.append(title, track, tip); $('usage').append(row);
-    if (focused === a.id) row.focus();
+    const open = usageOpen === a.id; row.classList.toggle('open', open); row.classList.toggle('dismissed', usageDismissed === a.id); trigger.setAttribute('aria-expanded', String(open)); trigger.setAttribute('aria-describedby', tip.id);
+    const close = () => { usageOpen = null; usageDismissed = a.id; renderUsage(); $('usage').querySelector(`[data-agent="${a.id}"] .usage-trigger`).focus(); };
+    trigger.addEventListener('click', () => { usageDismissed = null; usageOpen = usageOpen === a.id ? null : a.id; renderUsage(); $('usage').querySelector(`[data-agent="${a.id}"] .usage-trigger`).focus(); });
+    row.addEventListener('keydown', event => { if (event.key === 'Escape') { event.stopPropagation(); close(); } });
+    row.addEventListener('mouseleave', () => { if (usageDismissed === a.id) { usageDismissed = null; row.classList.remove('dismissed'); } });
+    trigger.addEventListener('blur', () => { if (usageDismissed === a.id) { usageDismissed = null; row.classList.remove('dismissed'); } });
+    trigger.append(title, track); row.append(trigger, tip); $('usage').append(row);
+    if (focused === a.id) trigger.focus();
   }
 }
+document.addEventListener('click', event => { if (usageOpen && !event.target.closest('.usage-row')) { usageOpen = null; renderUsage(); } });
+setInterval(() => { if (state.agentes) renderUsage(); }, 30000);
 function render() {
   const c = current(); const a = c && agentInfo(c.agente);
   $('workspace-name').textContent = folderName(c?.pasta || state.pasta);
