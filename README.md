@@ -217,14 +217,14 @@ O ícone de teclado na sidebar lista os atalhos. Valem com o foco no terminal in
 
 | Tecla | Ação |
 | --- | --- |
-| `Ctrl-T` ou `Alt-T` | abre a conversa nova; `Enter` já cria (`Tab` troca pasta e agente antes) |
-| `Ctrl-W` ou `Alt-W` | pede para fechar a conversa; `Enter` confirma, `Esc` cancela (não fecha a janela) |
+| `Ctrl-T` ou `Alt-T` | conversa nova |
+| `Ctrl-W` | fecha a conversa (sempre pede confirmação; não fecha a janela) |
 | `Alt-↑` / `Alt-↓` | conversa anterior / próxima da lista (dá a volta nas pontas) |
 | `Ctrl-Q` | liga / desliga o ditado (nada é enviado sozinho) |
 | `Alt-V` | liga / desliga a leitura em voz alta |
 | `Esc` | interrompe o agente e cala a leitura (chega ao agente) |
 
-Num navegador comum, `Ctrl-W` é reservado e fecha a aba: use `Alt-W`. No aplicativo próprio, os dois funcionam.
+Num navegador comum, `Ctrl-W` é reservado e fecha a aba: use o botão de fechar.
 
 ### Terminal (`hive --terminal`)
 
