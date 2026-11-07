@@ -280,7 +280,7 @@ A interface sempre deixa uma saída para o Claude Code sem nada em volta:
 | `hive: Claude Code não encontrado no PATH.` | O binário `claude` não está no PATH. Instale o Claude Code e confira com `command -v claude`. |
 | `zsh: command not found: hive` | Faltou o `npm link` na pasta clonada, ou ele rodou em outra versão do Node (nvm). Rode `npm link` na pasta e abra um terminal novo. |
 | `no such file or directory: .../bin/claude-ui` ao digitar `claude` | Sobrou a função `claude()` da versão antiga. Veja "Vindo de uma versão antiga?" no passo 3. |
-| `claude` abre a interface do Hive | Sobrou a função `claude()` (ou um alias) da versão antiga no `~/.zshrc`. `type -a claude` mostra a origem: apague-a e abra um terminal novo (no terminal atual, `unfunction claude` no zsh ou `unset -f claude` no bash). |
+| `claude` abre a interface do Hive | Sobrou a função `claude()` (ou um alias) da versão antiga no `~/.zshrc`. `type -a claude` mostra a origem (`claude is a shell function` é a antiga; o esperado é só o caminho do binário): apague-a e abra um terminal novo (no terminal atual, `unfunction claude` no zsh ou `unset -f claude` no bash). |
 | `no such file or directory: .../bin/hive` (zsh) ou `.../bin/hive: No such file or directory` (bash) | Sobrou um `alias hive=...` antigo no `~/.zshrc` (ou `~/.bashrc`) apontando para outro lugar. Apague-o e abra um terminal novo. |
 
 ### No sidebar
