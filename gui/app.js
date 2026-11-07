@@ -191,6 +191,36 @@ function connectTerminal(id) {
   connection.onclose = () => { if (terminalId !== id) return; $('terminal-reconnect').hidden = false; reconnectTimer = setTimeout(() => { if (state?.conversas.some(c => c.id === id)) connectTerminal(id); }, 1400); };
   requestAnimationFrame(sizeTerminal);
 }
+// Imagem colada ou solta: o servidor guarda o arquivo e o agente recebe o caminho, que Claude Code e Codex anexam.
+async function sendImages(files) {
+  const images = [...files].filter(f => f.type.startsWith('image/'));
+  if (!images.length || !terminal) return;
+  const paths = [];
+  try {
+    for (const file of images) {
+      const response = await fetch('/api/image', {method: 'POST', headers: {Authorization: headers.Authorization}, body: file});
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.erro || 'Não foi possível enviar a imagem.');
+      paths.push(/[\s'"\\]/.test(body.caminho) ? `'${body.caminho.replace(/'/g, "'\\''")}'` : body.caminho);
+    }
+    if (connection?.readyState !== WebSocket.OPEN) throw new Error('Terminal desconectado. Aguarde a reconexão e tente de novo.');
+    terminal.paste(`${paths.join(' ')} `);
+    terminal.focus();
+    toast(paths.length > 1 ? `${paths.length} imagens enviadas ao agente.` : 'Imagem enviada ao agente.');
+  } catch (error) { toast(error.message); }
+}
+$('terminal').addEventListener('paste', event => {
+  const files = [...(event.clipboardData?.files || [])].filter(f => f.type.startsWith('image/'));
+  if (!files.length) return;
+  event.preventDefault(); event.stopPropagation(); sendImages(files);
+}, true);
+$('terminal').addEventListener('dragover', event => { if ([...(event.dataTransfer?.types || [])].includes('Files')) event.preventDefault(); });
+$('terminal').addEventListener('drop', event => {
+  const files = [...(event.dataTransfer?.files || [])];
+  if (!files.length) return;
+  event.preventDefault();
+  if (files.some(f => f.type.startsWith('image/'))) sendImages(files); else toast('Só é possível soltar imagens no terminal.');
+});
 new ResizeObserver(() => requestAnimationFrame(sizeTerminal)).observe($('terminal'));
 window.addEventListener('focus', () => { document.title = 'Hive · seu espaço de trabalho'; });
 

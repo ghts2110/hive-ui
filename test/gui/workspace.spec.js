@@ -288,3 +288,25 @@ test('a interface abre em uma janela própria e o terminal funciona nela', async
 		await janela.screenshot({path: join(root, 'docs/gui-aplicativo.png')});
 	} finally { await aplicativo.close(); }
 });
+
+test('imagem colada ou solta no terminal chega ao agente como caminho de arquivo', async ({page, request}) => {
+	const auth = {Authorization: `Bearer ${key}`};
+	expect((await request.post(`${origin}/api/image`, {headers: auth, data: Buffer.from('não é imagem')})).status()).toBe(400);
+	expect((await request.post(`${origin}/api/image`, {data: Buffer.from('x')})).status()).toBe(401);
+	await page.goto(link);
+	await expect(page.getByText('Conectado localmente')).toBeVisible();
+	await page.getByRole('button', {name: 'Nova conversa', exact: true}).first().click();
+	await page.getByRole('button', {name: 'Iniciar conversa'}).click();
+	await expect(page.locator('#terminal .xterm-screen')).toContainText('AGENTE DE TESTE');
+	const png = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0];
+	const enviar = tipo => page.evaluate(([tipo, bytes]) => {
+		const dados = new DataTransfer(); dados.items.add(new File([new Uint8Array(bytes)], 'captura.png', {type: 'image/png'}));
+		if (tipo === 'paste') document.querySelector('.xterm-helper-textarea').dispatchEvent(new ClipboardEvent('paste', {clipboardData: dados, bubbles: true, cancelable: true}));
+		else document.querySelector('#terminal').dispatchEvent(new DragEvent('drop', {dataTransfer: dados, bubbles: true, cancelable: true}));
+	}, [tipo, png]);
+	await enviar('paste');
+	await expect(page.locator('#toast')).toHaveText('Imagem enviada ao agente.');
+	await expect(page.locator('#terminal .xterm-screen')).toContainText(/imagem-\d+-\w+\.png/);
+	await enviar('drop');
+	await expect(page.locator('#terminal .xterm-screen')).toContainText(/\.png\s+\S*imagem-\d+-\w+\.png/);
+});

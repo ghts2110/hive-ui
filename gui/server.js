@@ -1,9 +1,10 @@
 import {createServer} from 'node:http';
 import {execFileSync, execFile, spawn} from 'node:child_process';
-import {readFile, stat} from 'node:fs/promises';
-import {existsSync, statSync, chmodSync} from 'node:fs';
+import {readFile, stat, mkdtemp, writeFile} from 'node:fs/promises';
+import {existsSync, statSync, chmodSync, rmSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {randomBytes} from 'node:crypto';
+import {tmpdir} from 'node:os';
 import {dirname, resolve, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {promisify} from 'node:util';
@@ -28,6 +29,26 @@ if (process.platform === 'darwin') {
 	}
 }
 const pastaInicial = process.cwd();
+
+// Imagens coladas ou soltas viram arquivos temporários; o agente recebe o caminho, como ao arrastar no terminal.
+const limiteImagem = 20 * 1024 * 1024;
+let pastaImagens;
+function extensaoImagem(b) {
+	if (b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'png';
+	if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'jpg';
+	if (b.subarray(0, 4).toString('latin1') === 'GIF8') return 'gif';
+	if (b.subarray(0, 4).toString('latin1') === 'RIFF' && b.subarray(8, 12).toString('latin1') === 'WEBP') return 'webp';
+}
+async function salvarImagem(req) {
+	const partes = []; let total = 0;
+	for await (const parte of req) { total += parte.length; if (total > limiteImagem) throw new Error('Imagem muito grande (máximo de 20 MB).'); partes.push(parte); }
+	const bytes = Buffer.concat(partes), extensao = extensaoImagem(bytes);
+	if (!extensao) throw new Error('Formato não suportado. Use PNG, JPEG, GIF ou WebP.');
+	pastaImagens ||= await mkdtemp(join(tmpdir(), 'hive-imagens-'));
+	const caminho = join(pastaImagens, `imagem-${Date.now()}-${randomBytes(3).toString('hex')}.${extensao}`);
+	await writeFile(caminho, bytes, {mode: 0o600});
+	return caminho;
+}
 const chave = randomBytes(32).toString('hex');
 const socket = `hive-gui-${process.pid}`;
 const tmux = (...args) => execFileSync('tmux', ['-L', socket, ...args], {encoding: 'utf8', stdio: 'pipe', timeout: 4000}).trim();
@@ -196,6 +217,7 @@ const servidor = createServer(async (req, res) => {
 			if (!autorizado(req)) return json(res, 401, {erro: 'Abra o link exibido pelo hive no terminal.'});
 			if (req.method === 'GET' && url.pathname === '/api/state') return json(res, 200, estado());
 			if (req.method !== 'POST') return json(res, 405, {erro: 'Método inválido.'});
+			if (url.pathname === '/api/image') return json(res, 201, {caminho: await salvarImagem(req)});
 			let corpo = ''; for await (const parte of req) { corpo += parte; if (corpo.length > 16000) return json(res, 413, {erro: 'Pedido muito grande.'}); }
 			const dados = JSON.parse(corpo || '{}');
 			if (url.pathname === '/api/conversations') return json(res, 201, {id: await criar(dados)});
@@ -279,7 +301,10 @@ function encerrar() {
 	servidor.close();
 }
 process.on('SIGINT', encerrar); process.on('SIGTERM', encerrar);
-process.on('exit', () => { if (!finalizando) { try { tmux('kill-server'); } catch {} } });
+process.on('exit', () => {
+	if (pastaImagens) rmSync(pastaImagens, {recursive: true, force: true});
+	if (!finalizando) { try { tmux('kill-server'); } catch {} }
+});
 servidor.listen(Number(process.env.HIVE_GUI_PORT) || 0, '127.0.0.1', () => {
 	origem = `http://127.0.0.1:${servidor.address().port}`;
 	const link = `${origem}/#${chave}`;
