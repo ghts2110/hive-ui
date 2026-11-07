@@ -53,22 +53,55 @@ try {
 				tokens: join(pasta, 'tokens.txt'),
 				dataDir: join(pasta, 'espeak-ng-data'),
 			},
-			numThreads: 2,
+			numThreads: 4,
 		},
 	});
 
-	let fila = Promise.resolve();
-	for (const [i, frase] of frases.entries()) {
-		const audio = await tts.generateAsync({text: frase, sid: 0, speed: 1});
-		const arquivo = join(tmpdir(), `hive-fala-${process.pid}-${i}.wav`);
-		arquivos.add(arquivo);
-		sherpa.writeWave(arquivo, {samples: audio.samples, sampleRate: audio.sampleRate});
-		fila = fila.then(() => tocar(arquivo)).then(() => {
-			rmSync(arquivo, {force: true});
-			arquivos.delete(arquivo);
-		});
+	// Gerar mais devagar que falar deixa buracos no meio da leitura (frase
+	// longa depois de uma curta, CPU ocupada pelo claude). Por isso a fala só
+	// começa quando o áudio já pronto cobre o tempo estimado para gerar o resto.
+	const prontos = [];
+	let acorda = () => {};
+	const avisar = () => acorda();
+	let iniciar = false;
+	const gerar = (async () => {
+		let msGerando = 0;
+		let segundos = 0;
+		let caracteres = 0;
+		const total = frases.reduce((soma, frase) => soma + frase.length, 0);
+		for (const [i, frase] of frases.entries()) {
+			const inicio = Date.now();
+			const audio = await tts.generateAsync({text: frase, sid: 0, speed: 1});
+			msGerando += Date.now() - inicio;
+			segundos += audio.samples.length / audio.sampleRate;
+			caracteres += frase.length;
+			const arquivo = join(tmpdir(), `hive-fala-${process.pid}-${i}.wav`);
+			arquivos.add(arquivo);
+			sherpa.writeWave(arquivo, {samples: audio.samples, sampleRate: audio.sampleRate});
+			prontos.push(arquivo);
+			const faltaGerar = (msGerando / 1000) * ((total - caracteres) / caracteres);
+			const folga = segundos;
+			if (folga >= faltaGerar * 1.25) iniciar = true;
+			avisar();
+		}
+		iniciar = true;
+		avisar();
+	})();
+
+	const esperar = condicao => new Promise(resolve => {
+		const checar = () => (condicao() ? resolve() : (acorda = checar));
+		checar();
+	});
+
+	await esperar(() => iniciar);
+	for (let i = 0; i < frases.length; i++) {
+		await esperar(() => prontos.length > i);
+		const arquivo = prontos[i];
+		await tocar(arquivo);
+		rmSync(arquivo, {force: true});
+		arquivos.delete(arquivo);
 	}
-	await fila;
+	await gerar;
 } catch {
 	falhar();
 }
