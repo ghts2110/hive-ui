@@ -104,6 +104,22 @@ test('interface gráfica conecta agentes, preserva rascunho e troca modelos', as
 	await page.keyboard.press('Escape');
 	await fetch(`${origin}/api/conversations`, {method: 'POST', headers: {Authorization: `Bearer ${key}`, 'Content-Type': 'application/json'}, body: JSON.stringify({agente: 'claude', pasta})});
 	await expect(page.locator('.conversation-card')).toHaveCount(3);
+	// Atalhos com o foco no terminal: trocam de conversa sem enviar nada ao agente.
+	const ativa = () => page.locator('.conversation-card').evaluateAll(cards => cards.findIndex(card => card.classList.contains('active')));
+	await page.locator('.xterm-helper-textarea').focus();
+	const inicio = await ativa();
+	await page.keyboard.press('Alt+ArrowDown');
+	await expect.poll(ativa).toBe((inicio + 1) % 3);
+	await page.keyboard.press('Alt+ArrowUp');
+	await expect.poll(ativa).toBe(inicio);
+	await page.keyboard.press('Alt+ArrowUp');
+	await expect.poll(ativa).toBe((inicio + 2) % 3);
+	await page.keyboard.press('Alt+ArrowLeft');
+	await expect.poll(ativa).toBe(inicio);
+	await page.keyboard.press('Alt+KeyW');
+	await expect(page.getByRole('heading', {name: 'Encerrar esta conversa?'})).toBeVisible();
+	await page.getByRole('button', {name: 'Manter aberta'}).click();
+	await expect(page.locator('.conversation-card')).toHaveCount(3);
 	await page.getByRole('button', {name: 'Fechar conversa', exact: true}).click();
 	await expect(page.getByRole('heading', {name: 'Encerrar esta conversa?'})).toBeVisible();
 	await page.getByRole('button', {name: 'Manter aberta'}).click();
