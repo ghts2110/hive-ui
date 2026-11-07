@@ -99,6 +99,15 @@ function usageWindow(used, resets, label, now) {
   line.append(el('strong', '', `${label}: ${Math.round(Math.min(100, Math.max(0, used)))}% usado`), el('span', '', `Renova ${resetText(resets)}`));
   return line;
 }
+function renderWelcome() {
+  $('welcome-agents').replaceChildren();
+  for (const a of state.agentes) {
+    const button = el('button', `welcome-agent ${a.id}`); button.type = 'button'; button.disabled = !a.instalado;
+    const name = el('span'); name.append(el('strong', '', a.nome), el('small', '', a.instalado ? 'Disponível' : 'Não instalado'));
+    button.append(glyph(a.id, 'agent-choice-icon'), name); button.onclick = () => openCreate(a.id);
+    $('welcome-agents').append(button);
+  }
+}
 function renderUsage() {
   const focused = document.activeElement?.closest?.('.usage-row')?.dataset.agent; const now = Date.now() / 1000;
   $('usage').replaceChildren();
@@ -130,6 +139,7 @@ function render() {
   $('workspace-name').title = c?.pasta || state.pasta;
   $('breadcrumb-folder').textContent = folderName(c?.pasta || state.pasta);
   $('breadcrumb-title').textContent = c?.titulo || 'Visão geral';
+  renderWelcome();
   $('welcome').hidden = Boolean(c); $('agent-header').hidden = !c; $('terminal-section').hidden = !c;
   $('voice-button').setAttribute('aria-pressed', String(state.voz.ligada));
   $('voice-button').disabled = state.voz.preparando;
@@ -236,10 +246,10 @@ function createOptions() {
   const other = el('option', '', 'Outro modelo…'); other.value = '__custom__'; select.append(other);
   $('create-custom-model').hidden = true; $('create-custom-model').value = '';
 }
-function openCreate() {
+function openCreate(agentId) {
   if (!state || !connected) return toast('Aguarde a conexão com o servidor local.');
   $('create-error').textContent = ''; $('create-folder').value = current()?.pasta || state.pasta;
-  selectedAgent = current()?.agente || state.agentes.find(a => a.instalado)?.id || 'claude';
+  selectedAgent = (typeof agentId === 'string' && agentId) || current()?.agente || state.agentes.find(a => a.instalado)?.id || 'claude';
   $('agent-choices').replaceChildren();
   for (const a of state.agentes) {
     const label = el('label', `agent-choice ${a.id}${a.instalado ? '' : ' unavailable'}`);
