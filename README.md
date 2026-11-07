@@ -245,14 +245,15 @@ Com `hive --terminal`, modos não interativos, subcomandos (`-p`, `--version`, `
 | Conversa sem título e sem status | Título e status vêm de hooks passados com `--settings` (ver `sidebar/hooks.json`). Outro `--settings` ou hooks desligados nas suas configurações os desativam. |
 | Barra de uso "indisponível" | No Claude Code, só aparece depois que uma conversa do Hive recebe resposta, e não existe com login por API. No Codex, só com login pelo ChatGPT. |
 | Colar ou soltar imagem não faz nada | Só imagens são aceitas, e o terminal precisa estar conectado: aguarde a reconexão. |
+| "A voz falhou. Desligue e ligue a leitura para tentar novamente." | A voz não abriu. Desligue e ligue a leitura; se repetir, apague a pasta da voz em `~/.cache/hive-ui`. |
 | Notificações não aparecem | Ative no ícone de notificações e confira as permissões do sistema para o aplicativo. |
-| "sem voz natural: usando a do sistema" | O download da voz falhou (sem internet, sem `bzip2` no Linux). A leitura segue com a voz do sistema e tenta de novo na próxima vez. |
+| "Não foi possível baixar a voz natural." | O download da voz falhou (sem internet, sem `bzip2` no Linux). A leitura segue com a voz do sistema e tenta de novo na próxima vez que for ligada. |
 | "Sem voz em português do Brasil." | Sem a voz natural e sem voz pt-br no sistema. Instale uma em Ajustes do Sistema > Acessibilidade > Conteúdo Falado > Voz do Sistema > Gerenciar Vozes (Linux: `sudo apt install espeak-ng`). |
 | "Sem gravador de áudio." | Instale o `ffmpeg` (`brew install ffmpeg`); no Linux, `pulseaudio-utils`, `pipewire` (`pw-record`) ou `alsa-utils`. |
-| "Sem acesso ao microfone." | Libere em Ajustes do Sistema > Privacidade e Segurança > Microfone e reabra o aplicativo. Se já está liberado, confira o volume de entrada em Ajustes do Sistema > Som > Entrada. |
-| "sem ditado: o download falhou" | Sem internet ou sem `bzip2` no Linux. Clique no microfone para tentar de novo. |
-| "o ditado falhou: clique para tentar" | O modelo não abriu (arquivo corrompido em `~/.cache/hive-ui`, por exemplo). Tente de novo; se repetir, apague a pasta do modelo para ele ser baixado outra vez. |
-| "silêncio longo: parei de ouvir" | 20 segundos sem fala desligam o microfone. Ligue de novo quando for falar. |
+| "Sem acesso ao microfone." | O aviso fala em liberar o "Terminal"; vale para o aplicativo: libere em Ajustes do Sistema > Privacidade e Segurança > Microfone, reabra o Hive e clique no microfone de novo. Se já está liberado, confira o volume de entrada em Ajustes do Sistema > Som > Entrada. |
+| "Não foi possível baixar o ditado." | Sem internet ou sem `bzip2` no Linux. Clique em Ditado para tentar de novo. |
+| "O ditado falhou. Tente novamente." | O modelo não abriu (arquivo corrompido em `~/.cache/hive-ui`, por exemplo). Tente de novo; se repetir, apague a pasta do modelo para ele ser baixado outra vez. |
+| "Ditado pausado após silêncio." | 20 segundos sem fala desligam o microfone. Ligue de novo quando for falar. |
 
 Enquanto não resolve, `claude` e `codex` abrem os agentes puros.
 
@@ -275,7 +276,7 @@ Não sobra mais nada do projeto: a lista de conversas é só da sessão. O Elect
 
 - **Electron** abre a janela e carrega a interface local (`gui/`). O launcher espera a confirmação de abertura, informa falhas no terminal e devolve o prompt; o [ciclo de vida do aplicativo](docs/launcher-desacoplado.md) descreve o desacoplamento.
 - O **serviço local** (Node, só em `127.0.0.1`, com chave temporária) liga a janela aos agentes por WebSocket, com [xterm.js](https://xtermjs.org) e `node-pty` para o terminal.
-- **tmux** mantém cada conversa viva em seu próprio pane, com a config do repositório (`tmux.conf`); o `~/.tmux.conf` não é lido. No modo terminal, também monta o layout.
+- **tmux** mantém cada conversa viva em seu próprio pane, com a config do repositório (`gui/tmux.conf` na janela, `tmux.conf` no modo terminal); o `~/.tmux.conf` não é lido. No modo terminal, também monta o layout.
 - **Hooks e statusline** do Claude Code e hooks do Codex avisam o Hive quando uma conversa muda de status, ganha título ou edita arquivos, e trazem o uso do plano.
 - **[sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)** roda a voz e o ditado localmente.
 - O `hive` é um link, criado pelo `npm link`, para o launcher (`bin/hive`). O `claude` em si não é interceptado.
