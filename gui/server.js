@@ -10,6 +10,7 @@ import {promisify} from 'node:util';
 import {WebSocketServer} from 'ws';
 import * as pty from 'node-pty';
 import {topico} from '../sidebar/conversas.js';
+import {trocarModelo, detectarModelo} from '../sidebar/modelo.js';
 import * as voz from '../sidebar/voz.js';
 import {Ditado, comoResolver} from '../sidebar/ditado.js';
 import * as plano from '../sidebar/plano.js';
@@ -137,7 +138,7 @@ function atualizar() {
 			}
 			if (!modelo && c.agente === 'codex') {
 				const tela = tmux('capture-pane', '-p', '-t', c.pane, '-S', '-50');
-				const detectado = [...tela.matchAll(/^\s*[│┃]?\s*model:\s*([^\s│]+)/gmi)].at(-1)?.[1];
+				const detectado = detectarModelo(tela, c.agente);
 				if (detectado) c.modelo = detectado;
 			}
 		}
@@ -199,7 +200,12 @@ const servidor = createServer(async (req, res) => {
 			const dados = JSON.parse(corpo || '{}');
 			if (url.pathname === '/api/conversations') return json(res, 201, {id: await criar(dados)});
 			if (url.pathname !== '/api/action') return json(res, 404, {erro: 'Ação desconhecida.'});
-			if (dados.acao === 'selecionar') selecionar(dados.id);
+			if (dados.acao === 'modelo') {
+				const c = conversas.get(dados.id);
+				if (!c) throw new Error('Conversa encerrada.');
+				c.modelo = await trocarModelo({pane: c.pane, agente: c.agente, modelo: dados.modelo, tmux});
+			}
+			else if (dados.acao === 'selecionar') selecionar(dados.id);
 			else if (dados.acao === 'fechar') {
 				const c = conversas.get(dados.id); if (!c) throw new Error('Conversa encerrada.');
 				tmux('kill-session', '-t', `=${c.id}`);

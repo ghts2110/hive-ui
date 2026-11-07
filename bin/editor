@@ -1,0 +1,2 @@
+#!/bin/sh
+exec "$HIVE_NODE" "$HIVE_ROOT/sidebar/editor.js" "$@"

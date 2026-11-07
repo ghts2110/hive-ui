@@ -196,8 +196,8 @@ function openCreate() {
 function openModel() {
   const c = current(); if (!c) return;
   modelSource = {...c}; $('model-options').replaceChildren(); $('custom-model').value = ''; $('model-error').textContent = '';
-  for (const option of modelChoices(c.agente)) {
-    const label = el('label', 'model-option'); const radio = el('input'); radio.type = 'radio'; radio.name = 'model'; radio.value = option.id; radio.checked = option.id === '';
+  for (const option of modelChoices(c.agente).filter(option => c.agente !== 'codex' || option.id)) {
+    const label = el('label', 'model-option'); const radio = el('input'); radio.type = 'radio'; radio.name = 'model'; radio.value = option.id; radio.checked = option.id === c.modelo || (c.agente === 'claude' && option.id && c.modelo?.toLowerCase().startsWith(option.id)) || (!c.modelo && option.id === '');
     radio.addEventListener('change', () => { $('custom-model').value = ''; });
     const text = el('span'); text.append(el('strong', '', option.name), el('small', '', option.description)); label.append(radio, text); $('model-options').append(label);
   }
@@ -214,9 +214,15 @@ $('create-form').addEventListener('submit', event => {
   event.preventDefault(); createConversation({agente: selectedAgent, modelo: $('create-model').value === '__custom__' ? $('create-custom-model').value.trim() : $('create-model').value, pasta: $('create-folder').value.trim()}, 'create-error', 'create-submit', 'create-dialog');
 });
 $('create-model').addEventListener('change', () => { $('create-custom-model').hidden = $('create-model').value !== '__custom__'; if (!$('create-custom-model').hidden) $('create-custom-model').focus(); });
-$('model-form').addEventListener('submit', event => {
+$('model-form').addEventListener('submit', async event => {
   event.preventDefault(); if (!modelSource) return;
-  createConversation({agente: modelSource.agente, modelo: $('custom-model').value.trim() || document.querySelector('input[name=model]:checked')?.value || '', pasta: modelSource.pasta}, 'model-error', 'model-submit', 'model-dialog');
+  if ($('model-submit').disabled) return;
+  $('model-submit').disabled = true; $('model-error').textContent = '';
+  try {
+    await api('action', {acao: 'modelo', id: modelSource.id, modelo: $('custom-model').value.trim() || document.querySelector('input[name=model]:checked')?.value || ''});
+    $('model-dialog').close();
+  } catch (error) { $('model-error').textContent = error.message; }
+  finally { $('model-submit').disabled = false; }
 });
 $('custom-model').addEventListener('input', () => { if ($('custom-model').value) document.querySelectorAll('input[name=model]').forEach(radio => { radio.checked = false; }); });
 $('new-conversation').onclick = openCreate; $('welcome-create').onclick = openCreate;
