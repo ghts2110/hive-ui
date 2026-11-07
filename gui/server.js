@@ -1,7 +1,7 @@
 import {createServer} from 'node:http';
 import {execFileSync, execFile, spawn} from 'node:child_process';
-import {readFile, stat, mkdtemp, writeFile, rm} from 'node:fs/promises';
-import {existsSync, statSync, chmodSync} from 'node:fs';
+import {readFile, stat, mkdtemp, writeFile} from 'node:fs/promises';
+import {existsSync, statSync, chmodSync, rmSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {randomBytes} from 'node:crypto';
 import {tmpdir} from 'node:os';
@@ -296,13 +296,15 @@ function encerrar() {
 	if (finalizando) return;
 	finalizando = true; clearInterval(intervalo); clearInterval(intervaloPlano);
 	leituraPlano.abort(); ditado.desligar(true); leitor?.calar();
-	if (pastaImagens) rm(pastaImagens, {recursive: true, force: true}).catch(() => {});
 	for (const cliente of ws.clients) cliente.terminate();
 	try { tmux('kill-server'); } catch {}
 	servidor.close();
 }
 process.on('SIGINT', encerrar); process.on('SIGTERM', encerrar);
-process.on('exit', () => { if (!finalizando) { try { tmux('kill-server'); } catch {} } });
+process.on('exit', () => {
+	if (pastaImagens) rmSync(pastaImagens, {recursive: true, force: true});
+	if (!finalizando) { try { tmux('kill-server'); } catch {} }
+});
 servidor.listen(Number(process.env.HIVE_GUI_PORT) || 0, '127.0.0.1', () => {
 	origem = `http://127.0.0.1:${servidor.address().port}`;
 	const link = `${origem}/#${chave}`;

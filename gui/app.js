@@ -203,6 +203,7 @@ async function sendImages(files) {
       if (!response.ok) throw new Error(body.erro || 'Não foi possível enviar a imagem.');
       paths.push(/[\s'"\\]/.test(body.caminho) ? `'${body.caminho.replace(/'/g, "'\\''")}'` : body.caminho);
     }
+    if (connection?.readyState !== WebSocket.OPEN) throw new Error('Terminal desconectado. Aguarde a reconexão e tente de novo.');
     terminal.paste(`${paths.join(' ')} `);
     terminal.focus();
     toast(paths.length > 1 ? `${paths.length} imagens enviadas ao agente.` : 'Imagem enviada ao agente.');
@@ -215,9 +216,10 @@ $('terminal').addEventListener('paste', event => {
 }, true);
 $('terminal').addEventListener('dragover', event => { if ([...(event.dataTransfer?.types || [])].includes('Files')) event.preventDefault(); });
 $('terminal').addEventListener('drop', event => {
-  const files = [...(event.dataTransfer?.files || [])].filter(f => f.type.startsWith('image/'));
+  const files = [...(event.dataTransfer?.files || [])];
   if (!files.length) return;
-  event.preventDefault(); sendImages(files);
+  event.preventDefault();
+  if (files.some(f => f.type.startsWith('image/'))) sendImages(files); else toast('Só é possível soltar imagens no terminal.');
 });
 new ResizeObserver(() => requestAnimationFrame(sizeTerminal)).observe($('terminal'));
 window.addEventListener('focus', () => { document.title = 'Hive · seu espaço de trabalho'; });
