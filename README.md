@@ -183,6 +183,8 @@ A integração usa `/model` e o editor externo nativo (`Ctrl-G`) para guardar e 
 
 No rodapé do sidebar, um anel enche em laranja conforme a janela de 5h do plano Pro/Max é consumida. Com o mouse em cima, ou depois de um clique nele, aparecem a % usada e a hora em que a janela reinicia. O dado vem da statusline do Claude Code, então só muda quando alguma conversa do hive-ui recebe resposta; antes disso, ou com login por API, o anel fica apagado. Se você tem uma statusline própria, ela continua aparecendo.
 
+Na interface gráfica, a barra de uso de cada agente abre um quadro de detalhes ao passar o mouse, ao focar com o `Tab` ou ao clicar (`Esc` fecha, sem calar a leitura): a janela de 5h e a semanal, quando o agente informa, com % usada, data e hora da renovação no seu fuso e o tempo que falta. É a renovação do limite de uso, não a cobrança da assinatura. O Claude Code e o Codex (login pelo ChatGPT) fornecem esses dados; sem eles, o quadro avisa que não há dado em vez de mostrar um valor.
+
 ### Leitura em voz alta
 
 O alto-falante no canto de baixo do sidebar (ou `v`, com o sidebar focado) liga a leitura: cada texto que o Claude escreve na conversa da tela é falado assim que ele termina aquele trecho, sempre o mais recente; o que já estava escrito antes de ligar não é lido. Blocos de código, diffs, tabelas, links e saídas de comando ficam de fora. Um texto novo, uma mensagem sua, `Esc` ou `Ctrl-C` calam a fala; as conversas em segundo plano ficam em silêncio. Começa desligada.
@@ -255,7 +257,7 @@ No Terminal.app, `Alt-↑`/`↓` pedem **Ajustes → Perfis → Teclado → Usar
 | `v`, clique no alto-falante | sidebar | liga / desliga a leitura em voz alta |
 | `m`, clique no microfone | sidebar | liga / desliga o ditado por voz |
 | clique no anel | sidebar | mostra a % usada do plano e quando a janela reinicia |
-| `?` | sidebar | mostra os atalhos (`?`, `q` ou `Esc` fecham) |
+| `?` | sidebar | mostra os atalhos (`?`, `q` ou `Esc` fecha, sem calar a leituram) |
 | `Esc` | sidebar | volta para a conversa |
 
 Fora `Ctrl-\`, `Ctrl-T`, `Ctrl-W`, `Ctrl-Q` e `Alt-↑`/`↓` (e `Esc`/`Ctrl-C`, que calam a fala e seguem chegando ao Claude Code), os atalhos só valem com o sidebar focado, então os do Claude Code continuam chegando a ele. Esses deixam de chegar ao Claude Code dentro da interface (o `Ctrl-W` não apaga mais a palavra anterior no prompt). O prefixo do tmux fica desligado (`Ctrl-b` chega ao Claude Code) e `Ctrl-Z` fica desativado: suspenderia o claude sem um shell para trazê-lo de volta.
