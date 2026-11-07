@@ -211,6 +211,25 @@ No macOS, enquanto a interface estiver aberta, o Mac não entra em repouso e a t
 
 ## Atalhos
 
+### Interface gráfica
+
+O ícone de teclado na sidebar lista os atalhos. Valem com o foco no terminal integrado ou fora dele, e, exceto `Esc`, não chegam ao agente.
+
+| Tecla | Ação |
+| --- | --- |
+| `Ctrl-T` ou `Alt-T` | conversa nova |
+| `Ctrl-W` | fecha a conversa (sempre pede confirmação; não fecha a janela) |
+| `Alt-↑` / `Alt-↓` | conversa anterior / próxima da lista (dá a volta nas pontas) |
+| `Ctrl-Q` | liga / desliga o ditado (nada é enviado sozinho) |
+| `Alt-V` | liga / desliga a leitura em voz alta |
+| `Esc` | interrompe o agente e cala a leitura (chega ao agente) |
+
+Num navegador comum, `Ctrl-W` é reservado e fecha a aba: use o botão de fechar.
+
+### Terminal (`hive --terminal`)
+
+No Terminal.app, `Alt-↑`/`↓` pedem **Ajustes → Perfis → Teclado → Usar Option como tecla Meta**. A leitura em voz alta só tem atalho com o sidebar focado (`v`).
+
 ![Tela de ajuda do sidebar com todos os atalhos](docs/ajuda.png)
 
 | Tecla | Onde | Ação |
@@ -219,12 +238,13 @@ No macOS, enquanto a interface estiver aberta, o Mac não entra em repouso e a t
 | `Ctrl-T` | qualquer lugar | conversa nova |
 | `Ctrl-W` | qualquer lugar | fecha a conversa da tela (confirma com `s`) |
 | `Ctrl-Q` | qualquer lugar | liga / desliga o ditado por voz |
+| `Alt-↑` / `Alt-↓` | qualquer lugar | passa para a conversa anterior / próxima da lista (dá a volta nas pontas) |
 | `Esc`, `Ctrl-C` | qualquer lugar | calam a fala em andamento (e chegam ao Claude Code como sempre) |
 | `↑`/`↓`, `j`/`k` | sidebar | escolhe a conversa |
 | `g`/`G` | sidebar | vai ao início e ao fim |
 | `Enter`, clique | sidebar | traz a conversa para a tela (a rodinha do mouse move a seleção) |
 | `1`-`9` | sidebar | abre a conversa daquela posição |
-| `Tab` | sidebar | volta para a conversa anterior |
+| `Tab` | sidebar | volta para a última conversa usada |
 | `p` | sidebar | próxima pendente: a que passou a esperar por você ou terminou sem ser vista, depois as que continuam esperando |
 | `n` / `x` | sidebar | conversa nova / fecha a selecionada (pede confirmação) |
 | `c` | sidebar | conversa nova do Codex |
@@ -238,7 +258,7 @@ No macOS, enquanto a interface estiver aberta, o Mac não entra em repouso e a t
 | `?` | sidebar | mostra os atalhos (`?`, `q` ou `Esc` fecham) |
 | `Esc` | sidebar | volta para a conversa |
 
-Fora `Ctrl-\`, `Ctrl-T`, `Ctrl-W` e `Ctrl-Q` (e `Esc`/`Ctrl-C`, que calam a fala e seguem chegando ao Claude Code), os atalhos só valem com o sidebar focado, então os do Claude Code continuam chegando a ele. Esses quatro deixam de chegar ao Claude Code dentro da interface (o `Ctrl-W` não apaga mais a palavra anterior no prompt). O prefixo do tmux fica desligado (`Ctrl-b` chega ao Claude Code) e `Ctrl-Z` fica desativado: suspenderia o claude sem um shell para trazê-lo de volta.
+Fora `Ctrl-\`, `Ctrl-T`, `Ctrl-W`, `Ctrl-Q` e `Alt-↑`/`↓` (e `Esc`/`Ctrl-C`, que calam a fala e seguem chegando ao Claude Code), os atalhos só valem com o sidebar focado, então os do Claude Code continuam chegando a ele. Esses deixam de chegar ao Claude Code dentro da interface (o `Ctrl-W` não apaga mais a palavra anterior no prompt). O prefixo do tmux fica desligado (`Ctrl-b` chega ao Claude Code) e `Ctrl-Z` fica desativado: suspenderia o claude sem um shell para trazê-lo de volta.
 
 ## Claude Code puro
 

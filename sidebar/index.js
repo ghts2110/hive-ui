@@ -148,6 +148,7 @@ const atalhos = [
 	['enter', 'abrir'],
 	['1-9', 'abrir a nº'],
 	['tab', 'anterior'],
+	['alt+↑ alt+↓', 'anterior, próxima'],
 	['p', 'pendente'],
 	['n ctrl+t', 'nova'],
 	['c', 'nova do Codex'],

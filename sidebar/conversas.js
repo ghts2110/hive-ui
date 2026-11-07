@@ -128,6 +128,14 @@ export function abrir(sidebar, id) {
 	tmux('select-pane', '-t', id);
 }
 
+// A vizinha da conversa da tela na lista, dando a volta nas pontas.
+export function vizinha(sidebar, passo) {
+	const {conversas} = ler(sidebar);
+	const i = conversas.findIndex(c => c.naTela);
+	if (conversas.length < 2 || i < 0) return;
+	return conversas[(i + passo + conversas.length) % conversas.length].id;
+}
+
 export function nova(sidebar, ia, modelo) {
 	const id = criar(sidebar, ia, modelo);
 	abrir(sidebar, id);
