@@ -48,7 +48,6 @@ test('interface gráfica conecta agentes, preserva rascunho e troca modelos', as
 	await expect(page.getByText('Conectado localmente')).toBeVisible();
 	await expect(page.getByRole('heading', {name: 'Nenhuma conversa aberta'})).toBeVisible();
 	await expect(page.locator('#usage')).toContainText('Claude Code');
-	await page.screenshot({path: join(root, 'docs/gui-inicio.png')});
 	await page.getByRole('button', {name: 'Nova conversa', exact: true}).first().click();
 	await expect(page.getByRole('dialog')).toBeVisible();
 	await expect(page.getByLabel('Pasta do projeto', {exact: true})).toHaveValue(pasta);
@@ -98,9 +97,7 @@ test('interface gráfica conecta agentes, preserva rascunho e troca modelos', as
 		expect(execFileSync('tmux', ['-L', `hive-gui-${servidor.pid}`, 'list-panes', '-a', '-F', '#{pane_id} #{pane_pid} #{pane_current_path}'], {encoding: 'utf8'})).toBe(panesAntes);
 	}
 	await page.locator('.conversation-card').first().click();
-	await page.screenshot({path: join(root, 'docs/gui-conversa.png')});
 	await page.getByRole('button', {name: 'Nova conversa', exact: true}).first().click();
-	await page.screenshot({path: join(root, 'docs/gui-agentes.png')});
 	await page.keyboard.press('Escape');
 	await fetch(`${origin}/api/conversations`, {method: 'POST', headers: {Authorization: `Bearer ${key}`, 'Content-Type': 'application/json'}, body: JSON.stringify({agente: 'claude', pasta})});
 	await expect(page.locator('.conversation-card')).toHaveCount(3);
@@ -285,7 +282,6 @@ test('a interface abre em uma janela própria e o terminal funciona nela', async
 		await janela.locator('.xterm-helper-textarea').focus();
 		await janela.keyboard.type('janela-local-funcionando');
 		await expect(janela.locator('#terminal .xterm-screen')).toContainText('janela-local-funcionando');
-		await janela.screenshot({path: join(root, 'docs/gui-aplicativo.png')});
 	} finally { await aplicativo.close(); }
 });
 

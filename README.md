@@ -2,7 +2,7 @@
 
 Interface local para o [Claude Code](https://claude.com/claude-code) e o [Codex](https://github.com/openai/codex): uma janela própria com a lista de conversas ao lado, o terminal real de cada agente no centro, troca de modelo, ditado e leitura em voz alta. O visual e várias funções se inspiram no [workmux](https://github.com/raine/workmux).
 
-![Três conversas: uma esperando resposta, uma pronta e uma trabalhando; troca entre elas pela barra lateral](docs/demo.gif)
+![Hive com uma conversa do Claude Code e outra do Codex na barra lateral](docs/gui-conversa.png)
 
 - `hive` abre o aplicativo em uma janela própria, sem abrir o navegador.
 - Cada conversa é um agente real (`claude` ou `codex`) rodando em sua própria sessão; trocar de conversa não reinicia nem interrompe as outras.
@@ -82,9 +82,9 @@ Com o nvm, o `hive` fica preso à versão do Node em que o `npm link` rodou: dep
 3. Escolha o modelo (opcional) e a pasta de trabalho, e confirme. A conversa abre com o terminal do agente ao vivo.
 4. Escreva como em qualquer terminal do agente. Abra outras conversas com o **+**; trocar de cartão preserva o processo, a tela e o rascunho de cada uma.
 
-![Escolha de agente, modelo e pasta](docs/gui-agentes.png)
+![Tela inicial, sem conversas abertas](docs/gui-inicio.png)
 
-![Tela inicial do Hive](docs/gui-inicio.png)
+![Escolha de agente, modelo e pasta](docs/gui-agentes.png)
 
 ## Funcionalidades
 
@@ -95,11 +95,11 @@ Com o nvm, o `hive` fica preso à versão do Node em que o `npm link` rodou: dep
 - **Fechar:** o botão de fechar no terminal ou `Ctrl-W` encerra o processo do agente, sempre depois de uma confirmação. As outras conversas continuam. `/exit` no agente também encerra a conversa.
 - **Navegar:** clique no cartão, ou `Alt-↑`/`Alt-↓` para ir à anterior/próxima (dá a volta nas pontas).
 - **Buscar:** o campo "Buscar conversa…" da barra lateral filtra a lista pelo título, pelo agente e pela pasta.
-- A seta do cabeçalho (ícone de painel) esconde e mostra a barra lateral.
+- O ícone de painel, no alto da área principal, esconde e mostra a barra lateral.
 
 ### Status, título e pendências
 
-Cada cartão mostra o título, a pasta e o status: **Trabalhando**, **Aguardando você** (pergunta, permissão ou aprovação) ou **Pronto**. O título é o assunto que o agente dá à conversa; até ele dar um, vale a primeira mensagem. O botão **Precisa da sua atenção**, no pé da barra lateral, conta as conversas que esperam por você ou terminaram sem ser vistas e leva à próxima delas.
+Cada cartão mostra o título, a pasta e um ponto de status: **Trabalhando**, **Aguardando você** (pergunta, permissão ou aprovação) ou **Pronto** (passe o mouse sobre o ponto). Ao lado da pasta vai há quanto tempo a conversa está nesse status; se o Claude Code já editou arquivos nela, no lugar do tempo aparecem as linhas adicionadas e removidas (`+12 −3`), somadas por conversa (o Codex não informa isso). Uma bolinha marca a conversa que mudou fora da tela e ainda não foi aberta. O título é o assunto que o agente dá à conversa; até ele dar um, vale a primeira mensagem. O botão **Precisa da sua atenção**, no pé da barra lateral, conta as conversas que esperam por você ou terminaram sem ser vistas e leva à próxima delas.
 
 O status vem dos hooks de cada agente, passados só para a conversa aberta pelo Hive: nenhum arquivo do `~/.claude` ou `~/.codex` é alterado. Passar outro `--settings` ou desligar hooks nas suas configurações do Claude Code desativa título e status.
 
@@ -108,6 +108,8 @@ O status vem dos hooks de cada agente, passados só para a conversa aberta pelo 
 O cabeçalho mostra o agente, a versão, o plano, a pasta e o modelo em uso. Sem informação do agente, o modelo fica em "Identificando…": nada é presumido.
 
 O botão de modelo abre a troca **na mesma conversa**, preservando histórico, título, pasta e rascunho. No Claude, as opções são Padrão, Opus, Sonnet, Haiku ou outro ID; no Codex, o modelo identificado ou outro ID. As opções são aliases, sem presumir versões ou disponibilidade na conta. Aguarde a resposta ou resolva a interação pendente antes de trocar; falhas aparecem no seletor, e o cabeçalho só muda depois da confirmação do agente.
+
+![Troca de modelo na conversa atual](docs/gui-modelo.png)
 
 A troca usa `/model` e o editor externo nativo (`Ctrl-G`) para guardar e restaurar o rascunho. Requer Claude Code **2.1.311+** ou Codex CLI **0.167.0+**. Fora da troca, o `VISUAL`/`EDITOR` configurado continua valendo. O Codex aplica a escolha só à sessão; o Claude Code 2.1.311 também a salva como padrão para sessões futuras, como o próprio agente informa. Se o agente fechar durante a restauração, a mensagem de erro indica o arquivo temporário com o rascunho.
 
@@ -121,7 +123,7 @@ O ícone de notificações no rodapé da barra lateral liga os avisos do aplicat
 
 ### Imagens
 
-Cole (`Cmd-V`) ou solte uma imagem no terminal de uma conversa: o Hive a salva numa pasta temporária do sistema e escreve o caminho no campo do agente, que a lê. Vale para várias imagens de uma vez. Outros tipos de arquivo não são aceitos. A pasta temporária é apagada ao encerrar o aplicativo.
+Cole (`Cmd-V`) ou solte uma imagem no terminal de uma conversa: o Hive a salva numa pasta temporária do sistema e escreve o caminho no campo do agente, que a lê. Vale para várias imagens de uma vez, em PNG, JPEG, GIF ou WebP, de até 20 MB cada. Outros tipos de arquivo não são aceitos. A pasta temporária é apagada ao encerrar o aplicativo.
 
 ### Mac acordado
 
@@ -143,6 +145,8 @@ O ícone de teclado no rodapé da barra lateral lista os atalhos. Valem com o fo
 | `Ctrl-Q` | liga / desliga o ditado (nada é enviado sozinho) |
 | `Alt-V` | liga / desliga a leitura em voz alta |
 | `Esc` | interrompe o agente e cala a leitura (chega ao agente) |
+
+![Diálogo de atalhos do aplicativo](docs/gui-atalhos.png)
 
 `Alt-↑`/`↓` só funcionam fora de campos de texto. As teclas do agente (`Ctrl-C`, `Ctrl-R`, setas, etc.) seguem direto para ele. No [modo terminal](#modo-terminal), os atalhos são outros.
 
@@ -167,8 +171,6 @@ Enquanto a voz natural baixa, ou se o download falhar, a leitura usa a voz pt-br
 
 **Ditado** no rodapé (ou `Ctrl-Q`) liga o microfone: o que você fala vai sendo digitado no campo de mensagem da conversa da tela, uma frase por vez, a cada pausa. Nada é enviado sozinho: revise e aperte `Enter`.
 
-![Ctrl-Q liga o microfone e o que é dito aparece no campo de mensagem do Claude Code](docs/ditado.gif)
-
 - **Parar:** clicar de novo ou `Ctrl-Q` param de ouvir (o que já foi dito ainda é digitado). Enviar a mensagem e 20 segundos sem fala também param.
 - **Escolhas:** se a conversa espera uma escolha sua (permissão, pergunta), o que você ditar fica guardado até o campo de mensagem voltar, para nenhuma palavra ser tomada como resposta.
 - **Enquanto ouve:** a leitura em voz alta fica muda, para o ditado não transcrever a voz do agente.
@@ -177,8 +179,6 @@ Enquanto a voz natural baixa, ou se o download falhar, a leitura usa a voz pt-br
 ## Modo terminal
 
 `hive --terminal` abre a interface dentro do terminal: um tmux com a barra lateral à esquerda (Node + [Ink](https://github.com/vadimdemedes/ink)) e o agente ao lado. Os argumentos vão para o Claude Code (`hive --terminal --continue`, `hive --terminal "corrige o teste"`). Fechar o terminal encerra tudo: conversas, barra lateral e o tmux por trás.
-
-![Modo terminal: sidebar com uma conversa nova e o Claude Code ao lado](docs/inicio.png)
 
 O modo terminal tem o conjunto de funções que vieram primeiro: status por conversa (`✓` pronta, `?` esperando, spinner trabalhando), título, pasta e linhas adicionadas/removidas por conversa (`+12 -3`), conversas do Codex (`c` no sidebar), troca de modelo, uso do plano em anel, leitura em voz alta, ditado, aviso sonoro e no Dock (o sino do terminal), sidebar ajustável e Mac acordado.
 
