@@ -41,7 +41,7 @@ export function confirmacaoModelo(tela, agente) {
 }
 
 export function detectarModelo(tela, agente) {
-	if (agente === 'claude') return tela.match(/(?:^|\n)[^\n]*?\s((?:Opus|Sonnet|Haiku|Fable)[^\n·]*?)\s*·/)?.[1]?.trim();
+	if (agente === 'claude') return [...tela.matchAll(/(?:^|\n)[^\n]*?\s((?:Opus|Sonnet|Haiku|Fable)[^\n·]*?)\s*·/g)].at(-1)?.[1]?.trim();
 	return [...tela.matchAll(/^\s*[│┃]?\s*model:\s*([^\s│]+)/gmi)].at(-1)?.[1]
 		|| [...tela.matchAll(/^\s+(GPT-[\w.-]+)\s+[^\n]*·/gm)].at(-1)?.[1]?.toLowerCase();
 }
@@ -70,7 +70,7 @@ export async function trocarModelo({pane, agente, modelo, tmux}) {
 		'send-keys', '-t', pane, tecla, ';', 'select-pane', '-d', '-t', pane);
 	const tela = () => tmux('capture-pane', '-p', '-t', pane, '-S', '-100');
 	const antes = tela();
-	const atual = detectarModelo(antes, agente) || consultar('@modelo');
+	const atual = consultar('@modelo') || detectarModelo(antes, agente);
 	if (mesmoModelo(atual, modelo)) return atual;
 	validarDisponibilidade(consultar('@status'));
 	validarVersao(agente, consultar('@agente_versao'));
@@ -80,12 +80,15 @@ export async function trocarModelo({pane, agente, modelo, tmux}) {
 	if (!(agente === 'claude' ? /❯[^\n]*\n[─━]/ : /›[^\n]*\n/).test(antes)) {
 		throw new Error('Feche o menu ou a interação do agente antes de trocar o modelo.');
 	}
+	// select-pane também ativa o pane; devolve o foco a quem o tinha (ex.: o cabeçalho).
+	const ativo = tmux('list-panes', '-t', pane, '-F', '#{pane_active} #{pane_id}').split('\n').find(l => l.startsWith('1 '))?.slice(2);
 	trocas.add(pane);
 	let pasta;
 	try { pasta = await mkdtemp(join(tmpdir(), 'hive-modelo-')); }
 	catch (erro) { trocas.delete(pane); throw erro; }
 	let restaurado = false;
 	let preparado = false;
+	let erroOriginal;
 	try {
 		await writeFile(join(pasta, 'pedido.json'), JSON.stringify({modelo}), {mode: 0o600});
 		tmux('set', '-p', '-t', pane, '@modelo_pedido', pasta);
@@ -101,12 +104,17 @@ export async function trocarModelo({pane, agente, modelo, tmux}) {
 			const atual = tela();
 			const valor = confirmacaoModelo(atual, agente);
 			if (valor && valor !== confirmacaoModelo(antes, agente)) return valor;
-			if (/Model '.+' is unavailable|Invalid model|Unknown model|not available|Unable to change model/i.test(atual)) {
+			// Só vale erro novo: mensagens de tentativas anteriores continuam no scrollback.
+			const erros = texto => texto.match(/Model '.+' is unavailable|Invalid model|Unknown model|not available|Unable to change model/gi)?.length ?? 0;
+			if (erros(atual) > erros(antes)) {
 				throw new Error('Modelo inválido ou indisponível. Confira a mensagem do agente no terminal.');
 			}
 		}, 'O agente não confirmou a troca. Confira o erro no terminal; nenhuma conversa foi criada.');
 		tmux('set', '-p', '-t', pane, '@modelo', confirmado);
 		return confirmado;
+	} catch (erro) {
+		erroOriginal = erro;
+		throw erro;
 	} finally {
 		let falhaRestauracao;
 		try {
@@ -120,9 +128,11 @@ export async function trocarModelo({pane, agente, modelo, tmux}) {
 		} finally {
 			try { tmux('set', '-pu', '-t', pane, '@modelo_pedido'); } catch {}
 			try { tmux('select-pane', '-e', '-t', pane); } catch {}
+			if (ativo && ativo !== pane) { try { tmux('select-pane', '-t', ativo); } catch {} }
 			trocas.delete(pane);
 			if (restaurado || !await existe(join(pasta, 'preparado'))) await rm(pasta, {recursive: true, force: true});
 		}
-		if (falhaRestauracao) throw falhaRestauracao;
+		// Não esconde o motivo real da falha atrás do aviso de restauração.
+		if (falhaRestauracao && !erroOriginal) throw falhaRestauracao;
 	}
 }

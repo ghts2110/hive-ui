@@ -49,7 +49,7 @@ function ler() {
 		tmux('join-pane', '-d', '-v', '-b', '-l', '3', '-s', cabecalho, '-t', id);
 	}
 	const home = process.env.HOME;
-	return {id, sidebar, ia, modelo: ia === 'claude' ? escolhido || modelos.get(id) : modelos.get(id) || escolhido,
+	return {id, sidebar, ia, modelo: escolhido || modelos.get(id),
 		plano: ia === 'claude' ? planoClaude : tmux('show', '-qv', '@plano_codex'),
 		pasta: home && (pasta === home || pasta.startsWith(home + '/')) ? '~' + pasta.slice(home.length) : pasta,
 		focado: tmux('display', '-p', '-t', cabecalho, '#{pane_active}') === '1'};
@@ -101,11 +101,17 @@ function Cabecalho() {
 	const escolher = () => { setOpcao(0); setModelo(''); setErro(''); setMenu('lista'); };
 	const trocar = async escolhido => {
 		if (trocando) return;
+		const menuAnterior = menu;
 		setTrocando(true);
 		try {
 			await trocarModelo({pane: estado.id, agente: estado.ia, modelo: escolhido, tmux});
 			setMenu(null); setErro('');
-		} catch (erro) { setErro(erro.message || 'Não foi possível trocar o modelo.'); }
+		} catch (erro) {
+			// A troca passa o foco ao agente e fecha o menu; espera o foco voltar
+			// para reabri-lo com o motivo da falha.
+			await new Promise(resolve => setTimeout(resolve, 800));
+			setMenu(menuAnterior); setErro(erro.message || 'Não foi possível trocar o modelo.');
+		}
 		finally { setTrocando(false); }
 	};
 	const selecionar = indice => {

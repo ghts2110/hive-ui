@@ -136,7 +136,7 @@ function atualizar() {
 				if (c.enviadas !== undefined && c.enviadas !== enviadas) { ditado.desligar(true); leitor?.calar(); }
 				c.enviadas = enviadas;
 			}
-			if (c.agente === 'codex') {
+			if (!modelo && c.agente === 'codex') {
 				const tela = tmux('capture-pane', '-p', '-t', c.pane, '-S', '-50');
 				const detectado = detectarModelo(tela, c.agente);
 				if (detectado) c.modelo = detectado;
