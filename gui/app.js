@@ -99,11 +99,14 @@ function usageWindow(used, resets, label, now) {
   line.append(el('strong', '', `${label}: ${Math.round(Math.min(100, Math.max(0, used)))}% usado`), el('span', '', `Renova ${resetText(resets)}`));
   return line;
 }
+let welcomeKey = '';
 function renderWelcome() {
+  const key = state.agentes.map(a => `${a.id}:${a.instalado}`).join(); if (key === welcomeKey) return; welcomeKey = key;
   $('welcome-agents').replaceChildren();
   for (const a of state.agentes) {
     const button = el('button', `welcome-agent ${a.id}`); button.type = 'button'; button.disabled = !a.instalado;
-    const name = el('span'); name.append(el('strong', '', a.nome), el('small', '', a.instalado ? 'Disponível' : 'Não instalado'));
+    const name = el('span'); name.append(el('strong', '', a.nome), el('small', '', a.instalado ? '' : 'Não instalado'));
+    if (!a.instalado) button.title = `${a.nome} não encontrado. Instale e faça login pelo terminal.`;
     button.append(glyph(a.id, 'agent-choice-icon'), name); button.onclick = () => openCreate(a.id);
     $('welcome-agents').append(button);
   }
