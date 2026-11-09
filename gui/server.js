@@ -13,6 +13,7 @@ import * as pty from 'node-pty';
 import {topico} from '../sidebar/conversas.js';
 import {trocarModelo, detectarModelo} from '../sidebar/modelo.js';
 import * as voz from '../sidebar/voz.js';
+import {interrompeLeitura} from './entrada.js';
 import {Ditado, comoResolver} from '../sidebar/ditado.js';
 import * as plano from '../sidebar/plano.js';
 
@@ -278,7 +279,7 @@ ws.on('connection', (cliente, id) => {
 		try {
 			const mensagem = JSON.parse(dados.toString());
 			if (mensagem.tipo === 'entrada' && typeof mensagem.dados === 'string') {
-				if (mensagem.dados.includes('\x1b') || mensagem.dados.includes('\x03')) leitor?.calar();
+				if (interrompeLeitura(mensagem.dados)) leitor?.calar();
 				terminal.write(mensagem.dados);
 			} else if (mensagem.tipo === 'tamanho' && Number.isInteger(mensagem.colunas) && Number.isInteger(mensagem.linhas)) {
 				terminal.resize(Math.max(20, Math.min(400, mensagem.colunas)), Math.max(5, Math.min(200, mensagem.linhas)));
